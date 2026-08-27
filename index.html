@@ -36,13 +36,13 @@ body{font-family:var(--serif);color:var(--paper);-webkit-font-smoothing:antialia
   background:linear-gradient(to top,rgba(8,13,16,.95) 22%,rgba(8,13,16,.7) 56%,transparent 100%)}
 
 /* ---- 熱區 ---- */
-#hot{position:absolute;inset:0;z-index:6}
+#hot{position:absolute;inset:0;z-index:9}
 .spot{position:absolute;cursor:pointer;border-radius:3px;
   transition:background .3s,box-shadow .3s;background:transparent}
 .spot:hover,.spot:focus-visible{background:rgba(217,160,91,.09);
   box-shadow:inset 0 0 0 1px rgba(217,160,91,.34);outline:none}
 .spot.drag{cursor:grab;touch-action:none}
-.spot.drag.held{cursor:grabbing;z-index:14;background:rgba(217,160,91,.16);
+.spot.drag.held{cursor:grabbing;z-index:99;background:rgba(217,160,91,.16);
   box-shadow:0 0 22px rgba(217,160,91,.35),inset 0 0 0 1px rgba(217,160,91,.55)}
 .dot{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--sodium);
   left:50%;top:50%;margin:-2.5px 0 0 -2.5px;opacity:0;pointer-events:none;
@@ -575,11 +575,11 @@ const TOGGLE = {
 
 /* 第一層:儀式動作。key = 場景 index */
 const GATE = {
- 20:{id:'t1',label:'把第一卷放進錄音機',at:[186,392,26,32],to:[38,388,132,76],
+ 19:{id:'t1',label:'把第一卷拖進錄音機',at:[180,386,40,46],to:[38,388,132,76],
      say:'你把標著 8月11日 的錄音帶放進機器,按下播放。'},
- 32:{id:'t2',label:'換上第二卷',at:[214,392,26,32],to:[38,388,132,76],
+ 31:{id:'t2',label:'換上第二卷',at:[208,386,40,46],to:[38,388,132,76],
      say:'你把第一卷退出來,換上第二卷。'},
- 54:{id:'t3',label:'放進第三卷',at:[242,392,26,32],to:[38,388,132,76],
+ 53:{id:'t3',label:'放進第三卷',at:[236,386,40,46],to:[38,388,132,76],
      say:'你把第三卷放進錄音機。按下播放。'}
 };
 
@@ -642,9 +642,8 @@ function buildHot(){
               cy=parseFloat(d.style.top)+d.offsetHeight/2;
         if(cx>m.left-30&&cx<m.left+m.width+30&&cy>m.top-30&&cy<m.top+m.height+30){
           AudioEng.blip('ok');clearGate();pushLine(g.say,'line probe');
-        }else{place(d,g.to&&JSON.parse(d.dataset.rect));AudioEng.blip('probe');}};
+        }else{place(d,JSON.parse(d.dataset.rect));AudioEng.blip('probe');}};
       d.onclick=e=>e.stopPropagation();});
-    pushLine('▸ '+g.label+'　(或直接按下一句)','line gate');
   }else $('target').classList.remove('on');
 }
 function clearGate(){gateOn=null;$('target').classList.remove('on');buildHot();}
@@ -672,10 +671,10 @@ function renderScene(){
   $('chLab').textContent='場 '+String(si+1).padStart(2,'0')+' / '+SCENES.length;
   $('chTtl').textContent=s.t+(s.pt>1?'　·　'+s.p+'/'+s.pt:'');
   step();
+  if(gateOn) pushLine('▸ '+gateOn.label+'　(或直接按下一句略過)','line gate');
 }
 function step(){
   const s=SCENES[si];
-  if(gateOn)clearGate();
   if(li>=s.l.length-1){
     if(si>=SCENES.length-1){ending();return;}
     si++;renderScene();return;}
