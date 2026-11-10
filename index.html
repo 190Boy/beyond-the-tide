@@ -235,6 +235,7 @@ body.hz .line.in{animation-name:inkh}
 .seg button[aria-pressed=true]{border-color:var(--sodium);color:var(--sodium)}
 .set select{font-family:var(--kai);font-size:15px;color:var(--paper);background:#0B1114;border:1px solid var(--line);
   padding:10px 12px;min-height:44px;max-width:100%;width:100%}
+.ver a{color:var(--sea)}
 .ver{margin-top:22px;font-family:var(--kai);font-size:12px;color:#5E5C55;letter-spacing:.06em}
 #logList p{font-size:16px;line-height:1.95;letter-spacing:.03em;margin-bottom:.35em;color:#B9B09C}
 #logList p.q{color:var(--paper)}
@@ -326,6 +327,7 @@ body.hz .line.in{animation-name:inkh}
       <h3>朗讀的聲音</h3>
       <select id="selVoice" aria-label="朗讀的聲音"></select>
       <p class="ver" id="voiceNote"></p>
+      <p class="ver" id="credit" hidden>有音檔的段落，旁白語音由 <a href="https://ondoku3.com/" target="_blank" rel="noopener">Ondoku</a> 產生。</p>
       <p class="ver" id="ver"></p>
     </div>
   </div>
@@ -356,7 +358,7 @@ body.hz .line.in{animation-name:inkh}
 
 <script>
 /* 版本號：每次改檔時往上加，顯示在「目錄」最下面 */
-const VERSION = "閱讀器 v3.0（2026-11-10）";
+const VERSION = "閱讀器 v3.1（2026-11-10）";
 
 /* 正文：一整條壓縮過的 JSON。要改文字只需替換這一行。
    格式 { "t": 章節名, "bd": 場景圖, "p": 第幾段, "pt": 共幾段, "l": [句子...] } */
@@ -1231,6 +1233,88 @@ const Voice=(()=>{
     stop(){seq++;if(ok){try{speechSynthesis.cancel();}catch(e){}}}};
 })();
 
+/* ================= 旁白音檔 =================
+   音檔放在 audio/ 資料夾，檔名和 narration.html 列的一樣（s00a.mp3、s01.mp3…）。
+   有檔案就播檔案，沒有就退回上面的裝置語音；每一句的起訖時間是載入時從波形自動算出來的，不用另外標。 */
+const AUDIO_DIR='audio/';
+/* 從一段旁白的波形找出每一句從第幾秒開始：先找停頓，再用「這一句大約佔全文多少比例」去對 */
+function alignLines(d,sr,lines){
+  const win=Math.round(sr*.02),n=Math.floor(d.length/win),dur=d.length/sr,e=new Float32Array(n);let peak=0;
+  for(let i=0;i<n;i++){let s=0;for(let k=i*win;k<(i+1)*win;k++)s+=d[k]*d[k];e[i]=Math.sqrt(s/win);if(e[i]>peak)peak=e[i];}
+  const thr=Math.max(.006,peak*.035),sil=[];let st=-1;
+  for(let i=0;i<=n;i++){const q=i<n&&e[i]<thr;
+    if(q&&st<0)st=i;if(!q&&st>=0){const a=st*.02,b=i*.02;if(b-a>=.24)sil.push({s:a,e:b});st=-1;}}
+  const head=sil.length&&sil[0].s<.05?sil.shift():null,tail=sil.length&&sil[sil.length-1].e>dur-.05?sil.pop():null;
+  const t0=head?head.e:0,tEnd=tail?tail.s:dur;
+  const cnt=lines.map(x=>x.replace(/[\s\*，。、？！：；「」『』（）—…．\.\-]/g,'').length||1),tot=cnt.reduce((a,b)=>a+b,0);
+  const N=lines.length,M=sil.length,t=[Math.max(0,t0-.1)],stop=[];
+  if(N>1){
+    let voiced=tEnd-t0;sil.forEach(x=>voiced-=x.e-x.s);
+    let v=0,prev=t0;const q=sil.map(x=>{v+=x.s-prev;prev=x.e;return v/voiced;});
+    const f=[];let c=0;for(let i=0;i<N-1;i++){c+=cnt[i];f.push(c/tot);}
+    let pick=null;
+    if(M>=N-1){ // 動態規劃：第 i 個句界配第 j 個停頓，順序不能交錯
+      const INF=1e9,cost=(i,j)=>Math.abs(q[j]-f[i])-.035*Math.min(1.2,sil[j].e-sil[j].s);
+      const D=Array.from({length:N-1},()=>new Float64Array(M).fill(INF)),P=Array.from({length:N-1},()=>new Int32Array(M).fill(-1));
+      for(let j=0;j<M;j++)D[0][j]=cost(0,j);
+      for(let i=1;i<N-1;i++){let best=INF,bj=-1;for(let j=i;j<M;j++){if(D[i-1][j-1]<best){best=D[i-1][j-1];bj=j-1;}D[i][j]=best+cost(i,j);P[i][j]=bj;}}
+      let j=0;for(let k=1;k<M;k++)if(D[N-2][k]<D[N-2][j])j=k;
+      pick=new Array(N-1);for(let i=N-2;i>=0;i--){pick[i]=j;j=P[i][j];}
+    }
+    for(let i=0;i<N-1;i++){
+      if(pick){const x=sil[pick[i]];stop.push(Math.min(x.e,x.s+.22));t.push(Math.max(x.s,x.e-.12));}
+      else{const at=t0+(tEnd-t0)*f[i];stop.push(at);t.push(at);}   // 停頓不夠用時，退回按字數比例
+    }
+  }
+  stop.push(Math.min(dur,tEnd+.25));
+  return {t,stop,dur,exact:N===1||M>=N-1};
+}
+const Narr=(()=>{
+  const clips={},byLine={};
+  SCENES.forEach((s,si)=>{const cs=MECH.filter(m=>m.at[0]===si&&m.at[1]>0).map(m=>m.at[1]).sort((a,b)=>a-b);let from=0,part=0;
+    [...cs,s.l.length].forEach(to=>{if(to<=from)return;
+      const c={name:'s'+String(si).padStart(2,'0')+(cs.length?String.fromCharCode(97+part):''),si,from,to,state:'new'};
+      clips[c.name]=c;for(let li=from;li<to;li++)byLine[si+'.'+li]=c;from=to;part++;});});
+  const el=new Audio();el.preload='auto';
+  let actx=null,cur=null,endAt=0,done=null,raf=0,seq=0,unlocked=false;
+  function load(c){if(c.state!=='new')return c.p;c.state='loading';
+    c.p=(async()=>{try{
+      const r=await fetch(AUDIO_DIR+c.name+'.mp3');if(!r.ok)throw 0;const ab=await r.arrayBuffer();
+      c.url=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));
+      actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+      const buf=await actx.decodeAudioData(ab.slice(0));
+      c.al=alignLines(buf.getChannelData(0),buf.sampleRate,SCENES[c.si].l.slice(c.from,c.to));
+      c.state='ready';const cr=document.getElementById('credit');if(cr)cr.hidden=false;
+    }catch(e){c.state='none';}})();return c.p;}
+  function tick(){if(!cur)return;
+    if(el.currentTime>=endAt-.015||el.ended){const d=done,my=seq;done=null;if(d)d();
+      if(seq===my)el.pause();          // 沒有接著念下一句（手動閱讀、遇到機關）：停在句尾的停頓裡
+      return;}
+    raf=requestAnimationFrame(tick);}
+  function start(c,at){const run=()=>{try{el.currentTime=at;}catch(e){}el.play().catch(()=>{});};
+    if(cur!==c){cur=c;el.src=c.url;el.addEventListener('loadedmetadata',run,{once:true});el.load();}else run();}
+  return{
+    clips,
+    /* 先把這一場（和下一場）的音檔抓好，讀到時才不用等 */
+    prep(si){Object.values(clips).forEach(c=>{if(c.si===si||c.si===si+1)load(c);});},
+    /* iPhone 要在使用者點按的當下先播一次，之後才允許自動播放 */
+    unlock(){if(unlocked)return;unlocked=true;try{el.muted=true;const p=el.play();if(p)p.catch(()=>{});el.pause();el.muted=false;}catch(e){}},
+    /* 念第 si 場第 li 句。有音檔回傳 true；沒有回傳 false（呼叫的人改用裝置語音） */
+    say(si,li,cb,fallback){const c=byLine[si+'.'+li];if(!c||c.state==='none')return false;const id=++seq;
+      const go=()=>{if(id!==seq)return;
+        if(c.state!=='ready'){fallback();return;}
+        const k=li-c.from,at=c.al.t[k];
+        endAt=(S.auto&&k+1<c.al.t.length)?c.al.t[k+1]:c.al.stop[k];done=cb;
+        const cont=cur===c&&!el.paused&&Math.abs(el.currentTime-at)<.45;
+        if(!cont)start(c,at);
+        cancelAnimationFrame(raf);raf=requestAnimationFrame(tick);};
+      if(c.state==='ready')go();else load(c).then(go);
+      return true;},
+    stop(){seq++;done=null;cancelAnimationFrame(raf);try{el.pause();}catch(e){}},
+    get el(){return el;}
+  };
+})();
+
 /* ================= 記住進度與設定 ================= */
 const KEY='beyond-the-tide.reader.v2';
 const Store={
@@ -1241,7 +1325,7 @@ const saved=Store.load();
 const S={ si:0, li:-1, done:new Set(saved.done||[]), tog:{},
   voice:saved.voice||null,
   dir:saved.dir==='h'?'h':'v', fs:['s','m','l'].includes(saved.fs)?saved.fs:'m', hints:saved.hints!==false,
-  auto:false, ended:false };
+  auto:false, narr:false, ended:false };
 function persist(){Store.save({si:S.si,li:S.li,done:[...S.done],dir:S.dir,fs:S.fs,hints:S.hints,voice:S.voice});}
 
 /* ================= 畫面 ================= */
@@ -1466,6 +1550,7 @@ function spin(){ $('deck').classList.add('play');clearTimeout(playTimer);
 function enterScene(instant){
   const s=SCENES[S.si];
   setArt(s.bd);
+  if(S.narr)Narr.prep(S.si);
   if(S.si===0||SCENES[S.si-1].t!==s.t||instant)addHeading(S.si,instant);
 }
 function step(){
@@ -1484,12 +1569,21 @@ function step(){
 function reveal(){
   S.li++;const t=SCENES[S.si].l[S.li];
   addLine(t,classOf(t));updateBar();spin();persist();syncScene();
-  const spoken=Voice.say(t,()=>{if(S.auto&&!anySheet()){clearTimeout(autoTimer);autoTimer=setTimeout(step,420);}});
+  speak(t);
+}
+/* 念出剛出現的那一句：先找音檔，沒有就用裝置語音；都沒有而且開著「自動」，就照字數等一下再往下 */
+function speak(t){
+  let spoken=false;
+  if(S.narr){
+    const later=()=>{if(S.auto&&!anySheet()){clearTimeout(autoTimer);autoTimer=setTimeout(step,420);}};
+    const viaVoice=()=>{if(!Voice.say(t,later)&&S.auto)queueAuto(t.length);};
+    spoken=Narr.say(S.si,S.li,()=>{if(S.auto&&!anySheet())step();},viaVoice)||Voice.say(t,later);
+  }
   if(S.auto&&!spoken)queueAuto(t.length);
 }
 /* 跳到某個位置（續讀、目錄、改排版後重排）：把這一場已讀的句子一次排好 */
 function jump(si,li){
-  Mech.clear();
+  Mech.clear();Narr.stop();
   S.si=Math.max(0,Math.min(SCENES.length-1,si));S.ended=false;
   const n=SCENES[S.si].l.length;S.li=Math.max(-1,Math.min(n-1,li));
   flow.replaceChildren();enterScene(true);
@@ -1516,14 +1610,14 @@ function applySettings(relayout){
   syncScene();persist();
   if(relayout&&curBd)jump(S.si,S.li);
 }
-function openMenu(){stopAuto();Voice.stop();const box=$('chapList'),cur=chapOf(S.si);box.replaceChildren();
+function openMenu(){stopAuto();Voice.stop();Narr.stop();const box=$('chapList'),cur=chapOf(S.si);box.replaceChildren();
   CHAPS.forEach((ch,k)=>{const b=document.createElement('button');
     b.className='chapitem'+(k===cur?' cur':(k>cur?' unread':''));
     b.innerHTML=`<span class="n">${k+1}</span><span>${ch.t.replace(/</g,'&lt;')}</span><span class="c">${ch.n} 句</span>`;
     b.onclick=()=>{$('menu').classList.remove('on');jump(ch.first,-1);};box.appendChild(b);});
   $('menu').classList.add('on');
   const c=box.querySelector('.cur');if(c)c.scrollIntoView({block:'center'});}
-function openLog(){stopAuto();Voice.stop();const box=$('logList');box.replaceChildren();
+function openLog(){stopAuto();Voice.stop();Narr.stop();const box=$('logList');box.replaceChildren();
   const end=pos(),from=Math.max(0,end-90);let n=0,last=null;
   SCENES.forEach(s=>s.l.forEach(t=>{n++;if(n<=from||n>end)return;
     if(s.t!==last){last=s.t;const h=document.createElement('h4');h.textContent=s.t;box.appendChild(h);}
@@ -1538,17 +1632,17 @@ $('deck').onclick=openMenu;
 $('bMenu').onclick=openMenu;
 $('bLog').onclick=openLog;
 $('bAuto').onclick=()=>setAuto(!S.auto);
-if(!Voice.ok)$('bVoice').hidden=true;
 function fillVoices(){const sel=$('selVoice'),vs=Voice.list();sel.replaceChildren();
   vs.forEach(v=>{const o=document.createElement('option');o.value=v.name;o.textContent=v.name+'（'+v.lang+'）';sel.appendChild(o);});
   sel.value=Voice.current;sel.hidden=!vs.length;
-  $('voiceNote').textContent=!Voice.ok?'這個瀏覽器不支援朗讀。':(vs.length?'聲音來自這台裝置，換瀏覽器或裝置會有不同的選擇。':'這台裝置沒有中文語音。');}
+  $('voiceNote').textContent=!Voice.ok?'這個瀏覽器沒有內建語音；有旁白音檔的段落仍然會念。':(vs.length?'沒有旁白音檔的段落會用這個聲音念。聲音來自這台裝置，換瀏覽器或裝置會有不同的選擇。':'這台裝置沒有中文語音；有旁白音檔的段落仍然會念。');}
 if(S.voice)Voice.choose(S.voice);
 Voice.onlist(fillVoices);fillVoices();
 $('selVoice').onchange=e=>{S.voice=e.target.value;Voice.choose(S.voice);persist();
   const was=Voice.on;Voice.set(true);Voice.say('你發現那封信的時候，是四月的最後一個星期。',()=>{if(!was)Voice.set(false);});};
-$('bVoice').onclick=()=>{const v=Voice.set(!Voice.on);$('bVoice').setAttribute('aria-pressed',v);
-  if(v&&S.li>=0)Voice.say(SCENES[S.si].l[S.li]);};
+$('bVoice').onclick=()=>{S.narr=!S.narr;Voice.set(S.narr);$('bVoice').setAttribute('aria-pressed',S.narr);
+  if(S.narr){Narr.unlock();Narr.prep(S.si);if(S.li>=0&&!Mech.cur)speak(SCENES[S.si].l[S.li]);}
+  else{Narr.stop();Voice.stop();}};
 $('bSound').onclick=()=>{let v=false;try{v=AudioEng.set(!AudioEng.on);}catch(e){}
   $('bSound').setAttribute('aria-pressed',v);};
 document.addEventListener('keydown',e=>{
