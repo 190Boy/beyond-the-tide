@@ -210,6 +210,8 @@ body.hz .line.in{animation-name:inkh}
 .seg button{font-family:var(--kai);font-size:15px;letter-spacing:.1em;padding:9px 18px;min-height:44px;
   border:1px solid var(--line);color:var(--dim)}
 .seg button[aria-pressed=true]{border-color:var(--sodium);color:var(--sodium)}
+.set select{font-family:var(--kai);font-size:15px;color:var(--paper);background:#0B1114;border:1px solid var(--line);
+  padding:10px 12px;min-height:44px;max-width:100%;width:100%}
 .ver{margin-top:22px;font-family:var(--kai);font-size:12px;color:#5E5C55;letter-spacing:.06em}
 #logList p{font-size:16px;line-height:1.95;letter-spacing:.03em;margin-bottom:.35em;color:#B9B09C}
 #logList p.q{color:var(--paper)}
@@ -297,6 +299,9 @@ body.hz .line.in{animation-name:inkh}
       <div class="seg" id="segFs"><button data-v="s">小</button><button data-v="m">中</button><button data-v="l">大</button></div>
       <h3>畫面上可以碰的地方</h3>
       <div class="seg" id="segHint"><button data-v="1">顯示光點</button><button data-v="0">不顯示</button></div>
+      <h3>朗讀的聲音</h3>
+      <select id="selVoice" aria-label="朗讀的聲音"></select>
+      <p class="ver" id="voiceNote"></p>
       <p class="ver" id="ver"></p>
     </div>
   </div>
@@ -327,7 +332,7 @@ body.hz .line.in{animation-name:inkh}
 
 <script>
 /* 版本號：每次改檔時往上加，顯示在「目錄」最下面 */
-const VERSION = "閱讀器 v2.4（2026-11-10）";
+const VERSION = "閱讀器 v2.5（2026-11-10）";
 
 /* 正文：一整條壓縮過的 JSON。要改文字只需替換這一行。
    格式 { "t": 章節名, "bd": 場景圖, "p": 第幾段, "pt": 共幾段, "l": [句子...] } */
@@ -1126,10 +1131,20 @@ const AudioEng=(()=>{
 /* ================= 朗讀（用裝置內建的中文語音，沒有音檔） ================= */
 const Voice=(()=>{
   const ok='speechSynthesis' in window&&'SpeechSynthesisUtterance' in window;let on=false,voice=null,seq=0;
-  function pick(){const vs=speechSynthesis.getVoices(),f=re=>vs.find(v=>re.test(v.lang.replace('_','-')));
-    voice=f(/^zh-TW/i)||f(/^zh-Hant/i)||f(/^cmn-Hant/i)||f(/^zh/i)||f(/^cmn/i)||null;}
+  let want=null,onlist=null;
+  const zh=()=>speechSynthesis.getVoices().filter(v=>/^(zh|cmn)/i.test(v.lang));
+  const tw=v=>/^(zh[-_]TW|zh[-_]Hant|cmn[-_]Hant)/i.test(v.lang);
+  /* 比較像真人的聲音通常名字裡有這些字（Edge 的線上自然語音、Apple 的增強版／高品質） */
+  const nice=v=>/natural|online|neural|premium|enhanced|增強|高品質|優化/i.test(v.name);
+  function pick(){const vs=zh();
+    voice=vs.find(v=>v.name===want)||vs.find(v=>tw(v)&&nice(v))||vs.find(tw)||vs.find(nice)||vs[0]||null;
+    if(onlist)onlist();}
   if(ok){try{pick();speechSynthesis.addEventListener('voiceschanged',pick);}catch(e){}}
   return{ok,get on(){return on;},
+    list(){return ok?zh().sort((a,b)=>(tw(b)-tw(a))||(nice(b)-nice(a))):[];},
+    get current(){return voice?voice.name:'';},
+    choose(name){want=name;pick();},
+    onlist(fn){onlist=fn;},
     set(v){on=ok&&v;if(!on)this.stop();return on;},
     /* 念一句；念完（而且中途沒被下一句打斷）才呼叫 done */
     say(text,done){if(!on)return false;const id=++seq;
@@ -1148,9 +1163,10 @@ const Store={
 };
 const saved=Store.load();
 const S={ si:0, li:-1, done:new Set(saved.done||[]), gates:new Set(saved.gates||[]), tog:{},
+  voice:saved.voice||null,
   dir:saved.dir==='h'?'h':'v', fs:['s','m','l'].includes(saved.fs)?saved.fs:'m', hints:saved.hints!==false,
   auto:false, ended:false };
-function persist(){Store.save({si:S.si,li:S.li,done:[...S.done],gates:[...S.gates],dir:S.dir,fs:S.fs,hints:S.hints});}
+function persist(){Store.save({si:S.si,li:S.li,done:[...S.done],gates:[...S.gates],dir:S.dir,fs:S.fs,hints:S.hints,voice:S.voice});}
 
 /* ================= 畫面 ================= */
 const $=id=>document.getElementById(id);
@@ -1403,6 +1419,14 @@ $('deck').onclick=openMenu;
 $('bLog').onclick=openLog;
 $('bAuto').onclick=()=>setAuto(!S.auto);
 if(!Voice.ok)$('bVoice').hidden=true;
+function fillVoices(){const sel=$('selVoice'),vs=Voice.list();sel.replaceChildren();
+  vs.forEach(v=>{const o=document.createElement('option');o.value=v.name;o.textContent=v.name+'（'+v.lang+'）';sel.appendChild(o);});
+  sel.value=Voice.current;sel.hidden=!vs.length;
+  $('voiceNote').textContent=!Voice.ok?'這個瀏覽器不支援朗讀。':(vs.length?'聲音來自這台裝置，換瀏覽器或裝置會有不同的選擇。':'這台裝置沒有中文語音。');}
+if(S.voice)Voice.choose(S.voice);
+Voice.onlist(fillVoices);fillVoices();
+$('selVoice').onchange=e=>{S.voice=e.target.value;Voice.choose(S.voice);persist();
+  const was=Voice.on;Voice.set(true);Voice.say('你發現那封信的時候，是四月的最後一個星期。',()=>{if(!was)Voice.set(false);});};
 $('bVoice').onclick=()=>{const v=Voice.set(!Voice.on);$('bVoice').setAttribute('aria-pressed',v);
   if(v&&S.li>=0)Voice.say(SCENES[S.si].l[S.li]);};
 $('bSound').onclick=()=>{let v=false;try{v=AudioEng.set(!AudioEng.on);}catch(e){}
