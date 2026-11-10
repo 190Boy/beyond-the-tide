@@ -71,7 +71,7 @@ A1 是 Generative Narrative Discovery,A2 是 Structured World + Generative Perfo
 
 **已知限制**:收錄至第三卷結束;進度只存在同一台裝置的同一個瀏覽器。
 
-正文存放在 `index.html` 第 339 行的 `const SCENES` — 一整條壓縮過的 JSON。要改文字只需替換這一行,不必動任何 HTML。資料格式:
+正文存放在 `index.html` 第 340 行的 `const SCENES` — 一整條壓縮過的 JSON。要改文字只需替換這一行,不必動任何 HTML。資料格式:
 
 ```js
 { "t": 章節名, "bd": 場景圖, "p": 第幾段, "pt": 共幾段, "l": [句子...] }

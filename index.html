@@ -281,6 +281,7 @@ body.hz .line.in{animation-name:inkh}
       </svg>
       <span class="meta"><span class="ttl" id="ttl"></span><span class="cnt" id="cnt"></span></span>
     </button>
+    <button class="tool" id="bMenu">目錄</button>
     <button class="tool" id="bLog">回顧</button>
     <button class="tool" id="bAuto" aria-pressed="false">自動</button>
     <button class="tool" id="bVoice" aria-pressed="false">朗讀</button>
@@ -289,7 +290,7 @@ body.hz .line.in{animation-name:inkh}
 </div>
 
 <div class="sheet" id="menu" role="dialog" aria-label="目錄與設定"><div class="inner">
-  <h2>目錄</h2>
+  <h2>目錄與設定</h2>
   <div class="scroll">
     <div id="chapList"></div>
     <div class="set">
@@ -324,7 +325,7 @@ body.hz .line.in{animation-name:inkh}
         <button class="go" id="bStart">開始閱讀</button>
         <button class="go sub" id="bRestart" hidden>從頭讀起</button>
       </div>
-      <p class="note">點文字頁，讀下一句。<br>畫面上有光點的地方可以碰，碰了會多知道一些；不碰也能讀完。<br>收錄第一卷至第三卷，進度會自動記住。</p>
+      <p class="note">點文字頁，讀下一句。<br>畫面上有光點的地方可以碰，碰了會多知道一些；不碰也能讀完。<br>排版、字級、朗讀的聲音，在右下角的「目錄」裡。<br>收錄第一卷至第三卷，進度會自動記住。</p>
     </div>
     <h1 class="title">潮聲以外</h1>
   </div>
@@ -332,7 +333,7 @@ body.hz .line.in{animation-name:inkh}
 
 <script>
 /* 版本號：每次改檔時往上加，顯示在「目錄」最下面 */
-const VERSION = "閱讀器 v2.5（2026-11-10）";
+const VERSION = "閱讀器 v2.6（2026-11-10）";
 
 /* 正文：一整條壓縮過的 JSON。要改文字只需替換這一行。
    格式 { "t": 章節名, "bd": 場景圖, "p": 第幾段, "pt": 共幾段, "l": [句子...] } */
@@ -1416,6 +1417,7 @@ document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.s
 /* ---- 操作 ---- */
 pageEl.addEventListener('click',()=>{step();});
 $('deck').onclick=openMenu;
+$('bMenu').onclick=openMenu;
 $('bLog').onclick=openLog;
 $('bAuto').onclick=()=>setAuto(!S.auto);
 if(!Voice.ok)$('bVoice').hidden=true;
