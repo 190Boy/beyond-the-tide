@@ -180,7 +180,7 @@ body.hz .line.in{animation-name:inkh}
 @keyframes spin{to{transform:rotate(360deg)}}
 #deck .meta{min-width:0;font-family:var(--kai);line-height:1.35}
 #deck .ttl{display:block;font-size:14px;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#deck .cnt{display:block;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+#deck .cnt{display:block;white-space:nowrap;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;letter-spacing:.04em}
 .tool{font-family:var(--kai);font-size:14px;letter-spacing:.1em;color:var(--dim);
   min-width:40px;min-height:44px;padding:0 6px;transition:color .25s}
 .tool:hover{color:var(--fg)}
@@ -1343,7 +1343,7 @@ function updateBar(){
   const g=pos(),f=g/TOTAL;
   $('rL').setAttribute('r',(3.5+4.5*(1-f)).toFixed(2));$('rR').setAttribute('r',(3.5+4.5*f).toFixed(2));
   $('ttl').textContent=SCENES[S.si].t;
-  $('cnt').textContent=`第 ${g} 句，共 ${TOTAL} 句`;
+  $('cnt').textContent=`${g}／${TOTAL} 句`;
 }
 function spin(){ $('deck').classList.add('play');clearTimeout(playTimer);
   if(!S.auto)playTimer=setTimeout(()=>$('deck').classList.remove('play'),1300); }
