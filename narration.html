@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>潮聲以外 旁白稿</title>
+<style>
+  :root{--bg:#0B1114;--fg:#DED4BE;--dim:#8B8375;--line:rgba(222,212,190,.16);--sodium:#D9A05B;--ok:#7A9EA1}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px 16px 80px;background:var(--bg);color:var(--fg);
+    font-family:"Noto Serif TC","Songti TC","PMingLiU",serif;line-height:1.8}
+  main{max-width:760px;margin:0 auto}
+  h1{font-weight:400;font-size:24px;letter-spacing:.2em;margin:0 0 8px}
+  p.note{color:var(--dim);font-size:14px;margin:0 0 6px}
+  .sum{margin:14px 0 26px;font-size:14px;color:var(--sodium)}
+  h2{font-weight:400;font-size:17px;letter-spacing:.12em;margin:34px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  .clip{border:1px solid var(--line);padding:12px 14px;margin:10px 0}
+  .clip.done{border-color:var(--ok)}
+  .head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:14px}
+  .head code{font-family:ui-monospace,Consolas,monospace;color:var(--sodium);font-size:15px}
+  .head .n{color:var(--dim)}
+  .head button{margin-left:auto;font:inherit;font-size:14px;color:var(--fg);background:#16202A;border:1px solid var(--line);
+    padding:8px 16px;min-height:40px;cursor:pointer}
+  .head button:hover{border-color:var(--sodium);color:var(--sodium)}
+  .head label{color:var(--dim);display:flex;align-items:center;gap:6px;cursor:pointer}
+  pre{white-space:pre-wrap;margin:10px 0 0;font:inherit;font-size:15px;color:#C9BFA8}
+  .err{color:#D0604C}
+</style>
+</head>
+<body>
+<main>
+  <h1>旁白稿</h1>
+  <p class="note">每一塊是一段要產生的語音。按「複製」貼到語音工具，下載後把檔名改成左邊那個名字。</p>
+  <p class="note">文字直接讀自同一個資料夾的 index.html，正文改了這裡會跟著變。勾選只是幫你記錄做到哪裡，存在這個瀏覽器裡。</p>
+  <p class="note">一段裡如果有「要讀者親手做」的機關，會從機關那一句切成兩段，這樣旁白才停得準。</p>
+  <div class="sum" id="sum">讀取中…</div>
+  <div id="list"></div>
+</main>
+<script>
+(async()=>{
+  const sum=document.getElementById('sum'),list=document.getElementById('list');
+  let html;
+  try{html=await (await fetch('index.html',{cache:'no-store'})).text();}
+  catch(e){sum.innerHTML='<span class="err">讀不到 index.html。這一頁要和 index.html 放在同一個資料夾，並且從網站（不是直接雙擊檔案）開啟。</span>';return;}
+  const m=html.match(/^const SCENES = (.*);$/m),mm=html.match(/const MECH = \[([\s\S]*?)\n\];/);
+  if(!m){sum.innerHTML='<span class="err">index.html 裡找不到正文。</span>';return;}
+  const SCENES=JSON.parse(m[1]);
+  /* 機關所在的句子：at:[場景,句] */
+  const cuts={};if(mm)[...mm[1].matchAll(/at:\[(\d+),\s*(\d+)\]/g)].forEach(x=>{(cuts[x[1]]=cuts[x[1]]||[]).push(+x[2]);});
+  const KEY='beyond-the-tide.narration.done';let done={};try{done=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){}
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(done));}catch(e){}};
+  const clean=t=>t.replace(/\*/g,'').replace(/　/g,' ');
+  let total=0,count=0,lastT=null;const clips=[];
+  SCENES.forEach((s,si)=>{
+    const cs=(cuts[si]||[]).filter(li=>li>0).sort((a,b)=>a-b);let from=0,part=0;
+    [...cs,s.l.length].forEach(to=>{if(to<=from)return;
+      const name='s'+String(si).padStart(2,'0')+(cs.length?String.fromCharCode(97+part):'');
+      clips.push({si,from,to,name,t:s.t,text:s.l.slice(from,to).map(clean).join('\n')});from=to;part++;});
+  });
+  clips.forEach(c=>{
+    if(c.t!==lastT){lastT=c.t;const h=document.createElement('h2');h.textContent=c.t;list.appendChild(h);}
+    const n=c.text.replace(/\n/g,'').length;total+=n;count++;
+    const d=document.createElement('div');d.className='clip'+(done[c.name]?' done':'');
+    d.innerHTML=`<div class="head"><code>${c.name}.mp3</code><span class="n">${n} 字，第 ${c.from+1}–${c.to} 句${n<10?'（不足 10 字）':''}</span>
+      <label><input type="checkbox" ${done[c.name]?'checked':''}> 做好了</label><button type="button">複製</button></div><pre></pre>`;
+    d.querySelector('pre').textContent=c.text;
+    const btn=d.querySelector('button');
+    btn.onclick=async()=>{try{await navigator.clipboard.writeText(c.text);btn.textContent='已複製';}
+      catch(e){const r=document.createRange();r.selectNodeContents(d.querySelector('pre'));const g=getSelection();g.removeAllRanges();g.addRange(r);btn.textContent='已選取，請按 Ctrl+C';}
+      setTimeout(()=>btn.textContent='複製',1600);};
+    d.querySelector('input').onchange=e=>{done[c.name]=e.target.checked;d.classList.toggle('done',e.target.checked);save();};
+    list.appendChild(d);
+  });
+  sum.textContent=`共 ${count} 段，${total} 字（不含換行）。最長的一段 ${Math.max(...clips.map(c=>c.text.replace(/\n/g,'').length))} 字。`;
+})();
+</script>
+</body>
+</html>
