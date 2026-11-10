@@ -3,205 +3,318 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B1114">
 <title>潮聲以外</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400&family=Noto+Serif+TC:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
+@property --bg{syntax:'<color>';inherits:true;initial-value:#0B1114}
 :root{
-  --ink:#0B1114; --paper:#DED4BE; --paper-dim:#8B8375;
-  --sodium:#D9A05B; --sea:#5E7F82; --rust:#8E3B32;
-  --mono: ui-monospace,"SF Mono","Cascadia Mono",Menlo,monospace;
-  --serif:"Noto Serif TC","Songti TC",serif;
-  --barH:66px;
+  --ink:#0B1114; --paper:#DED4BE; --sodium:#D9A05B; --sea:#7A9EA1; --rust:#B4503F;
+  --bg:var(--ink); --fg:var(--paper); --dim:#8B8375; --line:rgba(222,212,190,.16);
+  --fs:19px;
+  --ming:"Noto Serif TC","Songti TC","PMingLiU","Noto Serif CJK TC",serif;
+  --kai:"LXGW WenKai TC","Kaiti TC","BiauKai","DFKai-SB","KaiTi",var(--ming);
 }
+body[data-bd=vision]{--bg:#EFE6D2; --fg:#2A251E; --dim:#7D7362; --line:rgba(42,37,30,.2); --sea:#3F6669; --sodium:#9A6420}
+body[data-bd=dark]{--bg:#06090A}
+body[data-bd=market]{--bg:#0F0B09}
+body[data-fs=s]{--fs:17px} body[data-fs=l]{--fs:22px}
+@media (min-aspect-ratio:1/1) and (min-height:700px){
+  :root{--fs:clamp(19px,1.5vw,24px)} body[data-fs=s]{--fs:clamp(17px,1.3vw,21px)} body[data-fs=l]{--fs:clamp(22px,1.8vw,28px)}
+}
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;background:var(--ink)}
-body{font-family:var(--serif);color:var(--paper);-webkit-font-smoothing:antialiased;
-  overscroll-behavior:none;touch-action:manipulation}
+body{font-family:var(--ming);color:var(--fg);background:var(--bg);-webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;touch-action:manipulation;transition:--bg 1.4s ease,color 1.4s ease}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:1px solid var(--sodium);outline-offset:3px}
 
-#stage{position:fixed;inset:0;display:flex;flex-direction:column}
-#art{position:absolute;inset:0;overflow:hidden}
-#art svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-#art .layer{position:absolute;inset:0;opacity:0;transition:opacity 1.4s ease}
+/* ================= 版面：上圖下文（直式螢幕）／左圖右文（橫式螢幕） ================= */
+#app{position:fixed;inset:0;display:grid;grid-template-columns:minmax(0,1fr);
+  grid-template-rows:44vh minmax(0,1fr) auto;grid-template-rows:44dvh minmax(0,1fr) auto}
+#art{position:relative;overflow:hidden;background:#07090A;touch-action:none}
+#page{position:relative;min-height:0;padding:14px 22px 6px;cursor:pointer;display:flex;flex-direction:column;justify-content:center}
+#bar{display:flex;align-items:center;gap:2px;
+  padding:6px 12px calc(8px + env(safe-area-inset-bottom)) 14px}
+@media (min-aspect-ratio:1/1){
+  #app{grid-template-columns:minmax(0,56fr) minmax(0,44fr);grid-template-rows:minmax(0,1fr) auto}
+  #art{grid-row:1 / 3}
+  #page{padding:clamp(18px,7vh,72px) clamp(22px,4vw,64px) 10px}
+  #bar{padding:8px clamp(14px,3.4vw,56px) calc(14px + env(safe-area-inset-bottom))}
+}
+
+/* ---- 場景 ---- */
+#art .layer{position:absolute;inset:0;opacity:0;transition:opacity 1.6s ease}
 #art .layer.on{opacity:1}
-#grain{position:absolute;inset:-50%;pointer-events:none;opacity:.11;mix-blend-mode:overlay;
+#art svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+#art svg *{pointer-events:none}
+#atmos{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.z{transition:none;will-change:transform}
+.curt{transition:opacity 1.2s ease}
+svg.open .curt{opacity:.12}
+.glow{opacity:0;transition:opacity 1.2s ease} svg.open .glow{opacity:1}
+#grain{position:absolute;inset:-50%;pointer-events:none;opacity:.12;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-  animation:grainmove 700ms steps(4) infinite}
-@keyframes grainmove{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}
+  animation:grain 700ms steps(4) infinite}
+@keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}
   50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-2%)}100%{transform:translate(0,0)}}
 #vig{position:absolute;inset:0;pointer-events:none;
-  background:radial-gradient(120% 90% at 50% 42%,transparent 30%,rgba(0,0,0,.55) 78%,rgba(0,0,0,.86) 100%)}
-#scrim{position:absolute;left:0;right:0;bottom:0;height:72%;z-index:4;pointer-events:none;
-  background:linear-gradient(to top,rgba(8,13,16,.95) 22%,rgba(8,13,16,.7) 56%,transparent 100%)}
+  background:radial-gradient(120% 100% at 50% 45%,transparent 42%,rgba(0,0,0,.5) 100%)}
+/* 圖與文字頁相接的那一邊，融進頁面底色 */
+#blend{position:absolute;left:0;right:0;bottom:-1px;height:34%;pointer-events:none;
+  background:linear-gradient(to top,var(--bg) 4%,transparent)}
+@media (min-aspect-ratio:1/1){
+  #blend{left:auto;top:0;bottom:0;right:-1px;width:26%;height:auto;
+    background:linear-gradient(to left,var(--bg) 3%,transparent)}
+}
 
-/* ---- 熱區 ---- */
-#hot{position:absolute;inset:0;z-index:9}
-.spot{position:absolute;cursor:pointer;border-radius:3px;
-  transition:background .3s,box-shadow .3s;background:transparent}
-.spot:hover,.spot:focus-visible{background:rgba(217,160,91,.09);
-  box-shadow:inset 0 0 0 1px rgba(217,160,91,.34);outline:none}
-.spot.drag{cursor:grab;touch-action:none}
-.spot.drag.held{cursor:grabbing;z-index:99;background:rgba(217,160,91,.16);
-  box-shadow:0 0 22px rgba(217,160,91,.35),inset 0 0 0 1px rgba(217,160,91,.55)}
-.dot{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--sodium);
-  left:50%;top:50%;margin:-2.5px 0 0 -2.5px;opacity:0;pointer-events:none;
-  box-shadow:0 0 8px rgba(217,160,91,.8);transition:opacity .5s}
-.hints .dot{opacity:.5;animation:pulse 2.6s ease-in-out infinite}
-.spot.used .dot{opacity:.14 !important;animation:none}
-@keyframes pulse{0%,100%{opacity:.22;transform:scale(1)}50%{opacity:.7;transform:scale(1.5)}}
-#target{position:absolute;z-index:13;border:1px dashed rgba(217,160,91,.5);border-radius:4px;
-  display:none;background:rgba(217,160,91,.06);pointer-events:none}
-#target.on{display:block;animation:pulse2 1.7s ease-in-out infinite}
-@keyframes pulse2{0%,100%{border-color:rgba(217,160,91,.3)}50%{border-color:rgba(217,160,91,.85)}}
+/* ---- 可以碰的地方 ---- */
+#art svg .spot{pointer-events:all}
+.spot{fill:transparent;cursor:pointer;outline:none}
+.spot:hover,.spot:focus-visible{fill:rgba(217,160,91,.1);stroke:rgba(217,160,91,.4);stroke-width:.6}
+.dot{fill:var(--sodium);pointer-events:none;opacity:0;transition:opacity .5s;
+  filter:drop-shadow(0 0 2px rgba(217,160,91,.9))}
+.hints .dot{opacity:.75;animation:pulse 2.8s ease-in-out infinite}
+.hints .used + .dot{opacity:.18;animation:none}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:.85}}
+.cas{transition:opacity .8s ease}
+#art svg .cas.live,#art svg .cas.live *{pointer-events:all}
+.cas.live{cursor:grab;filter:drop-shadow(0 0 4px rgba(217,160,91,.85))}
+.cas.live.held{cursor:grabbing}
+.cas.in{opacity:.14}
+#art svg .spot.mute{pointer-events:none}
+.slot{fill:rgba(217,160,91,.06);stroke:rgba(217,160,91,.6);stroke-width:.8;stroke-dasharray:3 3;
+  opacity:0;pointer-events:none}
+.slot.on{opacity:1;animation:pulse 1.8s ease-in-out infinite}
 
-/* ---- 進度 ---- */
-#tapebar{position:relative;z-index:5;padding:calc(env(safe-area-inset-top) + 14px) 18px 0;
-  display:flex;align-items:center;gap:11px;pointer-events:none}
-.reel{width:20px;height:20px;flex:0 0 auto}
-.reel circle{fill:none;stroke:var(--paper-dim);stroke-width:1.1}
-.reel .hub{fill:var(--paper-dim);opacity:.5}
-.reel.spin{animation:spin 3.4s linear infinite}
+/* ---- 文字頁 ---- */
+#flow{width:100%;flex:1 1 auto;min-height:0;overflow:hidden;writing-mode:vertical-rl;-webkit-writing-mode:vertical-rl;
+  font-size:var(--fs);line-height:1.95;letter-spacing:.06em;text-align:start;
+  font-feature-settings:"vpal" 0}
+body.hz #flow{writing-mode:horizontal-tb;-webkit-writing-mode:horizontal-tb;line-height:2;letter-spacing:.03em}
+@media (min-aspect-ratio:1/1){ #flow{max-height:calc(var(--fs) * 34)} }
+#flow.turn{animation:turn .5s ease}
+@keyframes turn{from{opacity:0}to{opacity:1}}
+.chap{font-weight:300;font-size:1.42em;letter-spacing:.26em;line-height:1.5;
+  margin-block-end:.9em;padding-block-end:.75em;border-block-end:1px solid var(--line)}
+.chap small{display:block;font-family:var(--kai);font-size:.48em;letter-spacing:.14em;
+  color:var(--dim);margin-block-start:.5em}
+.chap.vol{color:var(--rust)}
+.line{margin-block-end:.42em;transition:opacity .9s ease}
+.line.old{opacity:.5}
+.line.in{animation:ink .7s ease both}
+@keyframes ink{from{opacity:0;clip-path:inset(0 0 70% 0)}to{opacity:1;clip-path:inset(0 0 -10% 0)}}
+body.hz .line.in{animation-name:inkh}
+@keyframes inkh{from{opacity:0;clip-path:inset(0 70% 0 0)}to{opacity:1;clip-path:inset(0 -10% 0 0)}}
+.line strong{font-weight:400;color:var(--sodium);letter-spacing:.12em}
+.line.date{color:var(--rust);letter-spacing:.14em}
+.line.date strong{color:inherit}
+.line.probe{font-family:var(--kai);color:var(--sea);font-size:.9em;margin-block:.3em .6em}
+.line.gate{font-family:var(--kai);color:var(--sodium);font-size:.84em}
+.line.end{font-family:var(--kai);color:var(--dim);font-size:.9em;margin-block-start:1em}
+/* 直排裡的數字：三位以內橫著併成一格，更長的一個字一個字直著排 */
+.tcy{-webkit-text-combine:horizontal;text-combine-upright:all;letter-spacing:0}
+.up{text-orientation:upright;letter-spacing:0}
+#mark{position:absolute;left:22px;bottom:2px;width:9px;height:9px;pointer-events:none;
+  border-left:1px solid var(--dim);border-bottom:1px solid var(--dim);transform:rotate(-45deg);
+  opacity:.0;transition:opacity .4s}
+#mark.on{opacity:.8;animation:nudge 1.9s ease-in-out infinite}
+@keyframes nudge{0%,100%{transform:translateY(-3px) rotate(-45deg)}50%{transform:translateY(1px) rotate(-45deg)}}
+@media (min-aspect-ratio:1/1){ #mark{left:clamp(22px,4vw,64px)} }
+
+/* ---- 底列：一捲帶子 + 四個字 ---- */
+#deck{display:flex;align-items:center;gap:11px;min-width:0;flex:1;text-align:start;padding:5px 0;min-height:44px}
+#deck svg{width:54px;height:34px;flex:0 0 auto;overflow:visible}
+#deck .shell{fill:none;stroke:var(--dim);stroke-width:1}
+#deck .tape{fill:var(--dim);opacity:.55;transition:r .6s ease}
+#deck .hub{fill:var(--bg);stroke:var(--dim);stroke-width:.8;transition:fill 1.4s}
+#deck .spk{stroke:var(--dim);stroke-width:.9;transform-box:fill-box;transform-origin:center}
+#deck.play .spk{animation:spin 2.6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-#tapetrack{flex:1;height:1px;background:rgba(222,212,190,.18);position:relative}
-#tapefill{position:absolute;left:0;top:0;height:100%;background:var(--sodium);width:0%;
-  transition:width .45s ease;box-shadow:0 0 6px rgba(217,160,91,.5)}
-#counter{font-family:var(--mono);font-size:10px;letter-spacing:.09em;color:var(--paper-dim);
-  font-variant-numeric:tabular-nums}
-#chapter{position:relative;z-index:5;padding:12px 20px 0;pointer-events:none}
-#chapter .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--sea);
-  display:block;margin-bottom:4px}
-#chapter .ttl{font-size:12.5px;letter-spacing:.14em;color:var(--paper-dim)}
-
-/* ---- 文字 ---- */
-#textwrap{position:relative;z-index:8;flex:1;display:flex;flex-direction:column;
-  justify-content:flex-end;padding:0 22px calc(env(safe-area-inset-bottom) + var(--barH) + 16px);
-  max-width:640px;width:100%;margin:0 auto;pointer-events:none}
-.line{font-size:17px;line-height:2.05;letter-spacing:.03em;margin-top:.55em;opacity:0;
-  transform:translateY(7px);transition:opacity .7s ease,transform .7s ease}
-.line.shown{opacity:1;transform:none}
-.line.past{opacity:.3}.line.past2{opacity:.15}
-.line strong{font-weight:400;color:var(--sodium);letter-spacing:.1em}
-.line.date{font-family:var(--mono);letter-spacing:.2em;color:var(--rust);font-size:15px}
-.line.quote{color:#F0E9D8}
-.line.probe{color:var(--sea);font-size:15.5px;padding-left:15px;position:relative;line-height:1.85}
-.line.probe::before{content:"";position:absolute;left:0;top:.85em;width:8px;height:1px;
-  background:var(--sea);opacity:.7}
-.line.gate{color:var(--sodium);font-size:14px;letter-spacing:.09em;
-  font-family:var(--mono);opacity:.9}
-
-/* ---- 底部列 ---- */
-#bar{position:fixed;left:0;right:0;bottom:0;z-index:12;height:calc(env(safe-area-inset-bottom) + var(--barH));
-  padding:0 12px env(safe-area-inset-bottom);display:flex;align-items:center;gap:9px;
-  background:linear-gradient(to top,rgba(6,10,12,.97),rgba(6,10,12,.72) 70%,transparent);
-  backdrop-filter:blur(7px)}
-#next{flex:1;height:42px;border:1px solid rgba(222,212,190,.26);background:rgba(11,17,20,.5);
-  color:var(--paper);font-family:var(--mono);font-size:11.5px;letter-spacing:.3em;
-  cursor:pointer;transition:border-color .25s,color .25s,background .25s}
-#next:hover,#next:focus-visible{border-color:var(--sodium);color:var(--sodium);
-  background:rgba(217,160,91,.08);outline:none}
-#next:active{background:rgba(217,160,91,.16)}
-.tool{width:42px;height:42px;flex:0 0 auto;border:1px solid rgba(222,212,190,.2);
-  background:rgba(11,17,20,.5);color:var(--paper-dim);font-family:var(--mono);font-size:11px;
-  cursor:pointer;transition:color .25s,border-color .25s}
-.tool:hover,.tool:focus-visible{color:var(--sodium);border-color:rgba(217,160,91,.45);outline:none}
-.tool.off{color:#43433E}
-.tool.act{color:var(--sodium);border-color:rgba(217,160,91,.45)}
+#deck .meta{min-width:0;font-family:var(--kai);line-height:1.35}
+#deck .ttl{display:block;font-size:14px;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#deck .cnt{display:block;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.tool{font-family:var(--kai);font-size:14px;letter-spacing:.1em;color:var(--dim);
+  min-width:44px;min-height:44px;padding:0 9px;transition:color .25s}
+.tool:hover{color:var(--fg)}
+.tool[aria-pressed=true]{color:var(--sodium)}
 
 /* ---- 疊層 ---- */
-.ovl{position:fixed;inset:0;z-index:20;background:rgba(6,10,12,.96);display:none;
-  flex-direction:column;padding:calc(env(safe-area-inset-top) + 26px) 22px
-  calc(env(safe-area-inset-bottom) + 26px);backdrop-filter:blur(3px)}
-.ovl.on{display:flex}
-.ovl h2{font-family:var(--mono);font-size:10px;letter-spacing:.26em;color:var(--sea);
-  margin-bottom:20px;font-weight:400}
-#chaplist{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.chap{display:flex;align-items:baseline;gap:12px;padding:12px 2px;cursor:pointer;
-  border-bottom:1px solid rgba(222,212,190,.08)}
-.chap:hover{color:var(--sodium)}
-.chap .n{font-family:var(--mono);font-size:10px;color:var(--paper-dim);flex:0 0 22px}
-.chap .t{font-size:14px;letter-spacing:.05em}
-.close{margin-top:18px;align-self:flex-start;font-family:var(--mono);font-size:10px;
-  letter-spacing:.2em;color:var(--paper-dim);cursor:pointer;border:0;background:none;padding:8px 0}
-.close:hover{color:var(--paper)}
+.sheet{position:fixed;inset:0;z-index:20;display:none;background:#070B0D;color:var(--paper);
+  --fg:var(--paper);--dim:#8B8375;--line:rgba(222,212,190,.16);--sodium:#D9A05B;--sea:#7A9EA1}
+.sheet.on{display:block}
+.sheet .inner{height:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 22px) 24px calc(env(safe-area-inset-bottom) + 18px)}
+.sheet h2{font-weight:300;font-size:22px;letter-spacing:.3em;margin-bottom:16px;flex:0 0 auto}
+.sheet .scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px}
+.sheet .close{flex:0 0 auto;align-self:flex-start;margin-top:10px;font-family:var(--kai);font-size:15px;
+  letter-spacing:.14em;color:var(--dim);min-height:44px}
+.sheet .close:hover{color:var(--paper)}
+.chapitem{display:flex;width:100%;align-items:baseline;gap:14px;text-align:start;padding:12px 2px;
+  border-bottom:1px solid var(--line);font-size:16px;letter-spacing:.06em}
+.chapitem:hover{color:var(--sodium)}
+.chapitem .n{font-family:var(--kai);font-size:13px;color:var(--dim);flex:0 0 26px}
+.chapitem .c{margin-left:auto;font-family:var(--kai);font-size:12px;color:var(--dim);white-space:nowrap}
+.chapitem.unread{color:#6E685C}
+.chapitem.cur{color:var(--sodium)}
+.set{margin-top:22px;padding-bottom:6px}
+.set h3{font-family:var(--kai);font-weight:400;font-size:13px;letter-spacing:.14em;color:var(--dim);margin:16px 0 8px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{font-family:var(--kai);font-size:15px;letter-spacing:.1em;padding:9px 18px;min-height:44px;
+  border:1px solid var(--line);color:var(--dim)}
+.seg button[aria-pressed=true]{border-color:var(--sodium);color:var(--sodium)}
+.ver{margin-top:22px;font-family:var(--kai);font-size:12px;color:#5E5C55;letter-spacing:.06em}
+#logList p{font-size:16px;line-height:1.95;letter-spacing:.03em;margin-bottom:.35em;color:#B9B09C}
+#logList p.q{color:var(--paper)}
+#logList h4{font-family:var(--kai);font-weight:400;font-size:13px;letter-spacing:.14em;color:var(--sea);
+  margin:22px 0 10px}
+#logList strong{font-weight:400;color:var(--sodium)}
 
-#start{text-align:center;z-index:30}
-#start.on{display:flex;align-items:center;justify-content:center}
-#start .inner{max-width:340px}
-#start .mark{font-family:var(--mono);font-size:9.5px;letter-spacing:.32em;color:var(--sea);
-  margin-bottom:26px}
-#start .title{font-size:34px;font-weight:300;letter-spacing:.34em;text-indent:.34em;
-  color:#EDE4CF;margin-bottom:6px}
-#start .sub{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--paper-dim);
-  margin-bottom:36px}
-#start .card{border:1px solid rgba(217,160,91,.32);padding:15px 20px;margin-bottom:32px;
-  font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--sodium);
-  display:inline-block;line-height:1.9}
-#start .card em{font-style:normal;color:var(--rust)}
-.btn{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--paper);
-  border:1px solid rgba(222,212,190,.34);background:none;padding:13px 30px;cursor:pointer;
-  transition:border-color .3s,color .3s,letter-spacing .3s}
-.btn:hover,.btn:focus-visible{border-color:var(--sodium);color:var(--sodium);
-  letter-spacing:.3em;outline:none}
-#start .note{margin-top:22px;font-size:11px;line-height:1.95;color:#5E5C55;letter-spacing:.04em}
+/* ---- 開場 ---- */
+#start{position:fixed;inset:0;z-index:30;background:#07090A;color:var(--paper);display:none;overflow:hidden}
+#start.on{display:block}
+#start .back{position:absolute;inset:0;opacity:.62}
+#start .back svg{position:absolute;inset:0;width:100%;height:100%}
+#start .shade{position:absolute;inset:0;
+  background:linear-gradient(100deg,rgba(7,9,10,.94) 18%,rgba(7,9,10,.35) 58%,rgba(7,9,10,.8) 100%)}
+#start .comp{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;
+  padding:calc(env(safe-area-inset-top) + 7vh) 8vw calc(env(safe-area-inset-bottom) + 6vh);
+  max-width:1100px;margin:0 auto}
+#start .title{writing-mode:vertical-rl;-webkit-writing-mode:vertical-rl;font-weight:300;
+  font-size:clamp(46px,10.5vh,96px);letter-spacing:.32em;line-height:1;color:#F0E8D4;
+  animation:rise 2.2s cubic-bezier(.2,.6,.2,1) .3s both}
+@keyframes rise{from{opacity:0;clip-path:inset(0 0 100% 0)}to{opacity:1;clip-path:inset(0 0 -5% 0)}}
+#start .side{align-self:end;display:flex;flex-direction:column;align-items:flex-start;gap:22px;
+  animation:fade 1.4s ease 1.7s both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+#start .card{font-family:var(--kai);background:#EFE7D3;color:#3B3226;padding:14px 22px 12px;
+  transform:rotate(-3deg);box-shadow:0 10px 30px rgba(0,0,0,.55);line-height:1.5}
+#start .card b{display:block;font-weight:400;font-size:15px;letter-spacing:.3em}
+#start .card i{display:block;font-style:normal;font-size:27px;letter-spacing:.24em;color:#8E3B32}
+#start .card u{display:block;text-decoration:none;font-size:12px;letter-spacing:.16em;color:#7A6E58;
+  border-top:1px solid #C4B694;margin-top:6px;padding-top:5px}
+#start .en{font-style:italic;font-family:Georgia,"Times New Roman",serif;font-size:14px;letter-spacing:.06em;color:#8B8375}
+.go{font-family:var(--kai);font-size:17px;letter-spacing:.24em;padding:12px 26px;min-height:48px;
+  border:1px solid rgba(222,212,190,.4);color:var(--paper);transition:border-color .3s,color .3s}
+.go:hover{border-color:var(--sodium);color:var(--sodium)}
+.go.sub{border-color:transparent;color:#8B8375;padding-left:0;font-size:15px}
+.go.sub:hover{color:var(--paper)}
+#start .note{font-family:var(--kai);font-size:13px;line-height:1.9;color:#7C766A;letter-spacing:.05em;max-width:19em}
+#start .btns{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
 
-@media (max-width:400px){.line{font-size:16px;line-height:1.98}#start .title{font-size:27px}}
 @media (prefers-reduced-motion:reduce){
-  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;
-    transition-duration:.01ms !important}#grain{display:none}}
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  #grain{display:none}
+}
 </style>
 </head>
-<body>
+<body data-bd="letter">
 
-<div id="stage">
-  <div id="art"></div>
-  <div id="grain"></div>
-  <div id="vig"></div>
-  <div id="scrim"></div>
-  <div id="hot"></div>
-  <div id="target"></div>
-
-  <div id="tapebar">
-    <svg class="reel" id="reelL" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle class="hub" cx="12" cy="12" r="2.4"/></svg>
-    <div id="tapetrack"><div id="tapefill"></div></div>
-    <svg class="reel" id="reelR" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle class="hub" cx="12" cy="12" r="2.4"/></svg>
-    <span id="counter">000 / 713</span>
+<div id="app">
+  <div id="art">
+    <canvas id="atmos"></canvas>
+    <div id="grain"></div><div id="vig"></div><div id="blend"></div>
   </div>
-  <div id="chapter"><span class="lab" id="chLab"></span><span class="ttl" id="chTtl"></span></div>
-  <div id="textwrap"><div id="lines"></div></div>
+  <main id="page" aria-label="正文，點一下讀下一句">
+    <div id="flow" aria-live="polite"></div>
+    <span id="mark"></span>
+  </main>
+  <nav id="bar">
+    <button id="deck" aria-label="目錄與設定">
+      <svg viewBox="0 0 54 34" aria-hidden="true">
+        <rect class="shell" x=".5" y=".5" width="53" height="33" rx="3"/>
+        <rect class="shell" x="7" y="6" width="40" height="19" rx="2"/>
+        <circle class="tape" id="rL" cx="17" cy="15.5" r="8"/>
+        <circle class="tape" id="rR" cx="37" cy="15.5" r="3.5"/>
+        <g><circle class="hub" cx="17" cy="15.5" r="3"/><path class="spk" d="M14.6 15.5h4.8M17 13.1v4.8"/></g>
+        <g><circle class="hub" cx="37" cy="15.5" r="3"/><path class="spk" d="M34.6 15.5h4.8M37 13.1v4.8"/></g>
+        <path class="shell" d="M13 33.5l2-5h24l2 5"/>
+      </svg>
+      <span class="meta"><span class="ttl" id="ttl"></span><span class="cnt" id="cnt"></span></span>
+    </button>
+    <button class="tool" id="bLog">回顧</button>
+    <button class="tool" id="bAuto" aria-pressed="false">自動</button>
+    <button class="tool" id="bSound" aria-pressed="false">聲音</button>
+  </nav>
 </div>
 
-<div id="bar">
-  <button id="next">下 一 句</button>
-  <button class="tool act" id="btnHint" title="顯示可互動處">指</button>
-  <button class="tool" id="btnSound" title="聲音">♪</button>
-  <button class="tool" id="btnMenu" title="目錄">目</button>
-</div>
-
-<div class="ovl" id="menu"><h2>目錄</h2><div id="chaplist"></div>
-  <button class="close" id="btnClose">← 返回</button></div>
-
-<div class="ovl on" id="start"><div class="inner">
-  <div class="mark">A1 · 第一卷至第三卷</div>
-  <div class="title">潮聲以外</div>
-  <div class="sub">BEYOND THE TIDE</div>
-  <div class="card">海汐館　203<br><em>1993.8.17</em></div>
-  <div><button class="btn" id="btnStart">開始</button></div>
-  <div class="note">按「下一句」推進。<br>畫面上有光點的地方可以碰,碰了會多知道一些。<br>不碰也能讀完。</div>
+<div class="sheet" id="menu" role="dialog" aria-label="目錄與設定"><div class="inner">
+  <h2>目錄</h2>
+  <div class="scroll">
+    <div id="chapList"></div>
+    <div class="set">
+      <h3>排版</h3>
+      <div class="seg" id="segDir"><button data-v="v">直排</button><button data-v="h">橫排</button></div>
+      <h3>字級</h3>
+      <div class="seg" id="segFs"><button data-v="s">小</button><button data-v="m">中</button><button data-v="l">大</button></div>
+      <h3>畫面上可以碰的地方</h3>
+      <div class="seg" id="segHint"><button data-v="1">顯示光點</button><button data-v="0">不顯示</button></div>
+      <p class="ver" id="ver"></p>
+    </div>
+  </div>
+  <button class="close" data-close>回到故事</button>
 </div></div>
 
+<div class="sheet" id="log" role="dialog" aria-label="回顧"><div class="inner">
+  <h2>回顧</h2>
+  <div class="scroll" id="logList"></div>
+  <button class="close" data-close>回到故事</button>
+</div></div>
+
+<div id="start" class="on">
+  <div class="back" id="startBack"></div><div class="shade"></div>
+  <div class="comp">
+    <div class="side">
+      <div class="card"><b>海汐館</b><i>203</i><u>1993.8.17</u></div>
+      <div class="en">Beyond the Tide</div>
+      <div class="btns">
+        <button class="go" id="bStart">開始閱讀</button>
+        <button class="go sub" id="bRestart" hidden>從頭讀起</button>
+      </div>
+      <p class="note">點文字頁，讀下一句。<br>畫面上有光點的地方可以碰，碰了會多知道一些；不碰也能讀完。<br>收錄第一卷至第三卷，進度會自動記住。</p>
+    </div>
+    <h1 class="title">潮聲以外</h1>
+  </div>
+</div>
+
 <script>
+/* 版本號：每次改檔時往上加，顯示在「目錄」最下面 */
+const VERSION = "閱讀器 v2.0（2026-11-10）";
+
+/* 正文：一整條壓縮過的 JSON。要改文字只需替換這一行。
+   格式 { "t": 章節名, "bd": 場景圖, "p": 第幾段, "pt": 共幾段, "l": [句子...] } */
 const SCENES = [{"t":"四月的最後一個星期","bd":"letter","p":1,"l":["你是在四月的最後一個星期，收到那封信的。","寄件人是一間你完全沒有印象的旅館。","信封是很普通的米白色，上面沒有廣告，也沒有任何花俏的設計。你的名字是用鋼筆寫的，字跡很好看，卻有一種奇怪的老派感。","裡面只有一張房卡，和一句話。","**「您的房間，我們一直替您留著。」**","房卡上印著：","**海汐館　203**","你原本以為是什麼新式的行銷手法，直到你翻到背面。","那裡寫著一個日期。","**1993.8.17**","你盯著那個日期看了幾秒。","那一年你還很年輕。","但真正讓你停下來的不是年份，而是「海汐館」這三個字。你不知道為什麼，明明確定自己沒有住過這間旅館，看到名字的瞬間，腦中卻浮現出一個非常短暫的畫面。"],"pt":1},{"t":"一個非常短暫的畫面","bd":"vision","p":1,"l":["夏天。","很亮的午後。","老式旅館二樓的走廊。","走廊盡頭有一扇打開的窗，白色窗簾被海風吹得鼓起來。","有個女孩站在那裡。","你看不清她的臉。","畫面只出現了一瞬間，便消失了。","你把房卡放在桌上，沒有再理會。"],"pt":1},{"t":"南方的小城","bd":"street","p":1,"l":["三天後，因為一件與這封信完全無關的事情，你臨時去了南方。","事情辦完時已經下午四點多。回程的火車還有很久，你一個人走出車站，想找地方吃點東西。","那是一座你從來沒有來過的小城。","街道很安靜。幾間老房子拉下鐵門，騎樓下停著摩托車，遠處偶爾傳來平交道的聲音。再往前走，空氣裡開始有一點海的味道。","你忽然停下腳步。","街角立著一塊褪色的招牌。","**海汐館。**","你站在原地很久。","理智告訴你，世界上同名的旅館當然可能很多。","可是你伸手進外套口袋時，摸到了那張房卡。","你不記得自己把它帶出門。"],"pt":1},{"t":"只有門沒有鎖","bd":"lobby","p":1,"l":["旅館看起來已經歇業很多年了。玻璃門後一片昏暗，大廳裡的家具都罩著白布。","只有門沒有鎖。","你推開門。","櫃檯後方的牆上，掛著一整排房間鑰匙。","201。","202。","204。","205。","只有203的位置是空的。"],"pt":1},{"t":"二樓","bd":"corridor","p":1,"l":["你慢慢走上二樓。","木頭樓梯發出很輕的聲音。","二樓比你想像中明亮。夕陽從走廊盡頭照進來，一扇窗開著，白色窗簾被風一次又一次吹起。","和你那天看見的畫面一模一樣。","203就在右手邊。","你拿出房卡。"],"pt":1},{"t":"你果然還是來了","bd":"door","p":1,"l":["就在你準備碰上門把的時候，房間裡傳來一個女人的聲音。","很輕。","「你果然還是來了。」","你沒有開門。","因為你忽然發現一件比聲音本身更奇怪的事。","**你認得這個聲音。**","門裡安靜了幾秒。","你甚至開始懷疑，剛才那句話是不是自己聽錯了。","然後女人笑了一聲。","不是嘲笑。那聲音很輕，反而像是聽見了一個她早就知道你會問的問題。"],"pt":6},{"t":"你果然還是來了","bd":"door","p":2,"l":["「還是一樣。」","她說。","「第一件事情不是問我是誰，而是先確認我憑什麼知道是你。」","你沒有回答。","房間裡傳來很輕的摩擦聲，像有人從椅子上站了起來。接著是兩步腳步聲。","她似乎走到了門的另一邊。","現在，你們之間大概只隔著一扇門。","「你的腳步確實很輕。」她說，「所以我不是聽見你的腳步。」","「那妳怎麼知道？」","「因為三十三年前，你離開以前，我們約好了。」"],"pt":6},{"t":"你果然還是來了","bd":"door","p":3,"l":["走廊的風忽然大了一些。","窗簾被吹得高高揚起，又慢慢落下。","你看了一眼手裡那張寫著 **1993.8.17** 的房卡。","「我不記得。」","「我知道。」","她的回答快得幾乎沒有任何遲疑。","這反而讓你不舒服起來。","「那妳說說看，我是誰？」","門後再次沉默。","這一次，比剛才久得多。"],"pt":6},{"t":"你果然還是來了","bd":"door","p":4,"l":["最後她說：","「這個問題，我不能替你回答。」","你皺起眉。","「妳剛才不是說知道是我？」","「我知道。」","「那就說我的名字。」","「名字不是問題。」","「那什麼才是問題？」","女人沒有立刻回答。","遠處傳來火車經過的聲音。很遠，隔著傍晚的小城與海風，車輪壓過鐵軌的聲音一節一節傳過來。"],"pt":6},{"t":"你果然還是來了","bd":"door","p":5,"l":["然後，她忽然問了一個完全不相干的問題。","「你今年幾歲？」","「五十。」","門後沒有聲音了。","你等了幾秒。","「怎麼了？」","「......五十。」","她把這兩個字又說了一次。","這一次，你第一次從她的聲音裡聽見某種東西。","不是神祕。"],"pt":6},{"t":"你果然還是來了","bd":"door","p":6,"l":["不是故弄玄虛。","是震驚。","她像是在很努力地理解你剛才說的那個數字。","過了一會兒，她才很輕地說：","「那就不對了。」","你的手仍然放在門把附近。","「什麼不對？」","女人說：","「如果你已經五十歲了------」","她停了一下。","「那我現在應該已經死了。」","你沒有說話。","「而且，」她繼續說，「你不應該記得這間旅館。」"],"pt":6},{"t":"門開了一條縫","bd":"door2","p":1,"l":["這時候，門鎖忽然發出「喀」的一聲。","她從裡面把門打開了。","但門只開了一條縫。","你看見裡面沒有開燈。","夕陽從窗外斜斜照進房間，在地板上留下一道很長的光。","一隻女人的手扶著門。","那隻手很年輕。","她沒有把門繼續打開。","「所以，在你進來以前，我需要你先回答我一件事情。」","「什麼？」"],"pt":2},{"t":"門開了一條縫","bd":"door2","p":2,"l":["她問：","「1993年8月17日晚上，你最後見到的那個人------」","停了一下。","「是我，還是你自己？」","你一時沒有回答。","不是因為這個問題有多麼難，而是因為它根本沒有辦法回答。","「我不知道妳在說什麼。」","門後的人也沒有追問。","過了一會兒，她只是說：","「也是。」","然後把門打開了。"],"pt":2},{"t":"第一個感覺，是陌生","bd":"room","p":1,"l":["你終於看見她。","第一個感覺，是陌生。","她大約二十歲上下，穿著一件白色的短袖襯衫和深色長裙，頭髮在肩膀附近，沒有化妝。不是什麼會讓人第一眼驚艷的長相，但她看著你的方式，讓你非常不舒服。","因為她像是真的認識你。","不是「知道你是誰」。","而是認識。","她看著你的臉，看了很久。","視線從你的眼睛，慢慢移到額頭、鬢角，最後停在你的嘴角。","「真的老了。」","她說。"],"pt":3},{"t":"第一個感覺，是陌生","bd":"room","p":2,"l":["這句話不知道為什麼，比剛才那些莫名其妙的話更讓你心裡震了一下。","她伸出手，似乎想碰你的臉。","手伸到一半，又停住了。","「對不起。」","她把手收回去。","「我只是......從來沒有想過會看到你這個年紀。」","你看著她。","「我們以前是什麼關係？」","她沒有回答。","「朋友？」"],"pt":3},{"t":"第一個感覺，是陌生","bd":"room","p":3,"l":["她搖頭。","「戀人？」","她還是搖頭。","你開始有點不耐煩。","「那到底是什麼？」","她看著你，忽然笑了。","這一次的笑容很自然。","「你以前也是這樣。問事情一定要得到答案。」","她轉身走進房間。","「進來吧。」"],"pt":3},{"t":"七卷錄音帶","bd":"room","p":1,"l":["房間裡的陳設很舊。","不是刻意做成復古風格，而是真的停留在某個年代。木頭書桌、玻璃水杯、牆上的有線電話，床頭甚至放著一本已經泛黃的旅遊雜誌。","桌上有一台小型卡式錄音機。","旁邊放著七卷錄音帶。","每一卷都用同樣的字跡寫著日期。","你走近。","第一卷：","**1993.8.11**","第二卷：","**1993.8.12**"],"pt":4},{"t":"七卷錄音帶","bd":"room","p":2,"l":["一路到最後一卷。","**1993.8.17**","女人坐到窗邊。","「你真的什麼都不記得？」","「不記得。」","「連我也不記得？」","「不記得。」","她低下頭。","你第一次覺得，她似乎有些難過。","但那個表情很快就消失了。"],"pt":4},{"t":"七卷錄音帶","bd":"room","p":3,"l":["「那也許是好事。」","「為什麼？」","「因為當初是你自己決定忘掉的。」","你轉過頭。","「什麼意思？」","她沒有回答，只是指了指錄音帶。","「聽第一卷吧。」","你拿起標著8月11日的錄音帶。","塑膠殼已經有些泛黃。","「這是什麼？」"],"pt":4},{"t":"七卷錄音帶","bd":"room","p":4,"l":["「你留下來的。」","「我？」","「嗯。」","「錄了什麼？」","她想了一下。","「你第一次來這裡的那一天。」"],"pt":4},{"t":"第一卷　1993.8.11","bd":"tape","p":1,"l":["你把錄音帶放進機器。","按下播放。","先是一陣沙沙聲。","接著傳來海浪。","很遠的蟬鳴。","然後是一個年輕男人的聲音。","「八月十一日，下午三點四十二分。」","你整個人僵住。","那個聲音你從來沒有聽過。","可是你知道。"],"pt":9},{"t":"第一卷　1993.8.11","bd":"tape","p":2,"l":["那是你的聲音。","二十幾歲時的聲音。","錄音裡的你停了一下。","然後說：","「我今天遇到一個很奇怪的女孩。」","窗邊的女人看著你。","錄音繼續播放。","「她說她叫夏禾。」","你看向她。","她沒有否認。"],"pt":9},{"t":"第一卷　1993.8.11","bd":"tape","p":3,"l":["「她說她在等我。」","錄音裡傳來年輕的你笑了一聲。","「可是我根本不認識她。」","接著，錄音裡出現另一個聲音。","女孩的聲音。","「你以後會認識。」","那個聲音，正是坐在你面前的女人。","錄音裡的你說：","「妳怎麼知道？」","女孩回答："],"pt":9},{"t":"第一卷　1993.8.11","bd":"tape","p":4,"l":["「因為我見過你。」","「在哪裡？」","接下來是一段很長的沉默。","然後，二十歲的夏禾說：","「2016年。」","你下意識看向窗邊。","夏禾沒有看你。","她望著窗外。","錄音裡，年輕的你笑了。","「妳有病喔？現在才1993年。」"],"pt":9},{"t":"第一卷　1993.8.11","bd":"tape","p":5,"l":["「我知道。」","「那妳怎麼去2016？」","「我沒有去。」","「那是怎樣？」","錄音裡的女孩沉默了幾秒。","然後說：","「是你從2016年回來。」","錄音到這裡突然出現一陣劇烈的雜訊。","聲音消失。","幾秒之後，又恢復正常。"],"pt":9},{"t":"第一卷　1993.8.11","bd":"tape","p":6,"l":["但談話似乎已經過了一段時間。","你聽見自己的聲音。","這一次，完全沒有剛才開玩笑的語氣。","「所以妳的意思是，我會活到四十歲？」","夏禾說：","「至少。」","「那我四十歲的時候在做什麼？」","「我不能告訴你。」","「結婚了嗎？」","夏禾沒有回答。"],"pt":9},{"t":"第一卷　1993.8.11","bd":"tape","p":7,"l":["年輕的你笑了。","「有小孩？」","還是沒有回答。","「喂，這個總可以講吧？」","很長的沉默。","最後，夏禾說：","「有。」","錄音裡的你似乎很高興。","「男的女的？」","「都有。」"],"pt":9},{"t":"第一卷　1993.8.11","bd":"tape","p":8,"l":["「兩個？」","「嗯。」","你站在錄音機前。","房間忽然變得非常安靜。","窗外的海風吹進來，把桌上的窗簾輕輕吹動。","錄音裡那個二十歲的自己笑著說：","「那還不錯嘛。」","接著他問了一句：","「那我老婆是誰？」","夏禾沒有回答。"],"pt":9},{"t":"第一卷　1993.8.11","bd":"tape","p":9,"l":["年輕的你又問一次。","「我認識嗎？」","仍然沒有回答。","「是現在認識的人？」","錄音裡忽然傳來椅子移動的聲音。","似乎是夏禾站了起來。","然後，她說了一句非常奇怪的話。","「這個問題不要問我。」","「為什麼？」","「因為我就是為了這件事情來找你的。」","錄音到這裡結束。","喀。"],"pt":9},{"t":"磁帶停止轉動","bd":"room","p":1,"l":["磁帶停止轉動。","你沒有立刻說話。","夏禾依然坐在窗邊。","夕陽已經快沉到房子後面，她的臉一半在光裡，一半在陰影裡。","你看著桌上的另外六卷錄音帶。","8月12日。","13日。","14日。","15日。","16日。"],"pt":3},{"t":"磁帶停止轉動","bd":"room","p":2,"l":["最後是17日。","你忽然意識到一件事。","如果第一卷錄音是真的，那麼1993年的自己，在短短七天之內，知道了一些關於未來的事情。","包括自己會結婚。","會有兩個孩子。","會活過四十歲。","而到了最後一天------","不知道發生了什麼。","你選擇把這一切忘掉。","你抬頭看向夏禾。"],"pt":3},{"t":"磁帶停止轉動","bd":"room","p":3,"l":["她似乎知道你正在想什麼。","「第二卷開始，」她說，「事情就沒有這麼好玩了。」","窗外傳來很遠的海浪聲。","「你確定還要聽嗎？」"],"pt":3},{"t":"第二卷　1993.8.12","bd":"tape","p":1,"l":["你拿起第二卷錄音帶。","**1993.8.12**","夏禾沒有阻止你。","你把第一卷退出來，換上第二卷。按下播放鍵的時候，窗外最後一點夕陽已經落到屋頂後方。","沙沙聲響起。","這次沒有海浪。","先傳來的是腳踏車鈴聲。","然後是年輕時的你。","「八月十二日，晚上九點十七分。」","背景很吵。","有人說話，有機車經過，遠處似乎還有卡拉OK的歌聲。"],"pt":1},{"t":"夜市","bd":"market","p":1,"l":["「我們現在在夜市。」","接著是夏禾的聲音。","「不是說不要一直錄嗎？」","「這是證據。」","「證明什麼？」","「證明妳是神經病。」","她笑了。","「那你還跟神經病出來？」","「因為我想看看妳還能掰出什麼。」","錄音裡傳來塑膠袋摩擦的聲音。"],"pt":13},{"t":"夜市","bd":"market","p":2,"l":["「這個給你。」","「什麼？」","「紅茶。」","「我沒說我要喝。」","「你會喝。」","「為什麼？」","「因為你喜歡。」","年輕的你停了一下。","「妳怎麼知道？」","夏禾沒有回答。"],"pt":13},{"t":"夜市","bd":"market","p":3,"l":["你坐在2026年的旅館房間裡，忽然覺得這段對話有種奇怪的親密感。","不是戀人的親密。","至少還不是。","而是一個人已經知道另一個人很多事情，另一個人卻完全不知道她是誰。","錄音繼續。","「那我問妳。」","「嗯。」","「既然妳知道未來的我，那妳說一件只有我自己知道的事情。」","「現在的你知道，還是未來的你知道？」","「有差嗎？」"],"pt":13},{"t":"夜市","bd":"market","p":4,"l":["「差很多。」","「那就現在。」","夏禾沉默了一會兒。","「你小時候有一次離家出走。」","錄音裡的你笑了。","「這算什麼秘密。」","「你沒有真的要離家出走。」","笑聲停了。","「你只是想知道，有沒有人會來找你。」","背景仍然很吵。"],"pt":13},{"t":"夜市","bd":"market","p":5,"l":["可是錄音裡的你安靜下來。","夏禾接著說：","「後來有人來找你，所以你假裝自己只是出去玩。」","「......誰跟妳講的？」","「你。」","「我不可能跟別人講這個。」","「你後來會。」","錄音裡沉默了一陣。","接著，年輕的你說：","「好。」"],"pt":13},{"t":"夜市","bd":"market","p":6,"l":["「什麼？」","「我開始有一點相信妳了。」","「只有一點？」","「一點。」","夏禾笑了。","然後年輕的你問：","「所以2016年的我為什麼會回來？」","這一次，她很久沒有回答。","「因為你想救一個人。」","「誰？」"],"pt":13},{"t":"夜市","bd":"market","p":7,"l":["「我不能說。」","「又不能說。」","「真的不能。」","「那有救到嗎？」","夏禾沒有回答。","「喂。」","「......沒有。」","夜市的聲音從錄音裡傳出來。","有人叫賣。","有人笑。"],"pt":13},{"t":"夜市","bd":"market","p":8,"l":["遠處一輛機車按了兩聲喇叭。","年輕的你忽然問：","「那個人死了？」","「嗯。」","「什麼時候？」","「2016年。」","「所以我才回1993？」","「嗯。」","「回來找妳？」","夏禾沒有回答。"],"pt":13},{"t":"夜市","bd":"market","p":9,"l":["你坐在窗邊，看向現在的夏禾。","她也正看著錄音機。","她似乎已經聽過這些內容很多次了。","錄音裡，年輕的你忽然說：","「那就是妳嘛。」","夏禾的聲音有些慌。","「什麼？」","「我要救的人。」","「你不要亂猜。」","「妳從2016認識我，然後我從2016跑回1993，妳又說妳2016死了。這不是很好猜嗎？」"],"pt":13},{"t":"夜市","bd":"market","p":10,"l":["「不是。」","「那是誰？」","「不能告訴你。」","「所以就是妳。」","「不是。」","「妳說謊的時候會講很快。」","錄音裡突然安靜了。","過了一會兒，夏禾說：","「你怎麼知道？」","年輕的你笑起來。"],"pt":13},{"t":"夜市","bd":"market","p":11,"l":["「現在換我知道妳了。」","那句話說完以後，兩個人都沒有說話。","只有夜市的聲音。","不知道為什麼，你突然可以想像那個畫面。","1993年的夏夜。","兩個二十歲左右的年輕人坐在路邊，手裡拿著塑膠杯裝的紅茶。男孩覺得女孩滿口胡言，卻又開始有點相信她。","而女孩知道這個坐在自己旁邊的人，二十三年後會為了某個人的死亡，做一件不可思議的事。","錄音又繼續了一陣。","兩個人聊了一些很普通的事情。","電影。"],"pt":13},{"t":"夜市","bd":"market","p":12,"l":["學校。","想去哪裡。","想做什麼工作。","其中有些答案讓你覺得熟悉，有些卻完全不像現在的自己。","然後，在錄音快結束以前，夏禾突然問：","「如果有一天，你可以回到今天，你會想改什麼？」","「今天？」","「嗯。」","「幹嘛改？」","「隨便問問。」"],"pt":13},{"t":"夜市","bd":"market","p":13,"l":["年輕的你想了一下。","「不知道。」","「一定要選一件。」","「那......」","錄音裡傳來吸管碰到杯底的聲音。","「我會記得買大杯的紅茶。」","夏禾笑得很大聲。","「很無聊耶。」","「不然咧？今天又沒有發生什麼重要的事。」","她的笑聲慢慢停下來。","然後，她很小聲地說：","「你以後不會這樣想。」","錄音結束。"],"pt":13},{"t":"妳說的那個人，是妳嗎","bd":"room","p":1,"l":["喀。","第二卷磁帶停了。","你看著錄音機。","「她說的那個人，是妳嗎？」","你問。","夏禾坐在窗邊，沒有回答。","你轉頭看她。","「2016年死掉的人。」","她沉默了一會兒。","「第二卷的我，還不知道。」"],"pt":8},{"t":"妳說的那個人，是妳嗎","bd":"room","p":2,"l":["「什麼意思？」","「1993年的8月12日，我還不知道你為什麼回來。」","「可是錄音裡妳說------」","「我說了我知道的部分。」","她看著桌上的磁帶。","「也說了一些你要求我說的謊。」","你皺起眉。","「我要求？」","「嗯。」","「什麼時候？」"],"pt":8},{"t":"妳說的那個人，是妳嗎","bd":"room","p":3,"l":["她看向最後一卷。","**1993.8.17**","「最後一天。」","房間裡安靜下來。","你開始感覺到一件事情。","這七卷錄音帶不是七天的日記那麼簡單。","它們像是一個被刻意留下來的路徑。","有人希望你按照順序聽。","你伸手準備拿第三卷。","夏禾卻第一次阻止了你。"],"pt":8},{"t":"妳說的那個人，是妳嗎","bd":"room","p":4,"l":["她把手按在錄音帶上。","「等一下。」","「怎麼了？」","「第三卷以前，我要先告訴你一件事。」","她的表情變得很認真。","「從第三卷開始，你會聽到一些事情。」","「關於未來？」","「關於你。」","「有差嗎？」","「有。」"],"pt":8},{"t":"妳說的那個人，是妳嗎","bd":"room","p":5,"l":["她看著你。","「因為你現在很容易犯一個錯。」","「什麼？」","「你會以為錄音裡那個二十歲的人就是你。」","你沒有說話。","「他當然是你。」她說，「可是他還沒有做過你後來做的那些選擇。他沒有愛過你後來愛的人，沒有傷害過你後來傷害的人，也沒有失去那些你失去的人。」","你看著她。","「所以？」","「所以不要同情他。」","這句話讓你有些意外。"],"pt":8},{"t":"妳說的那個人，是妳嗎","bd":"room","p":6,"l":["「為什麼？」","夏禾慢慢把手從第三卷錄音帶上移開。","「因為最後真正想改變過去的人，不是五十歲的你。」","她說。","「是他。」","你低頭看向第三卷。","**1993.8.13**","「而你回到1993年，也不是為了救我。」","她停了一下。","「你是回來阻止他的。」"],"pt":8},{"t":"妳說的那個人，是妳嗎","bd":"room","p":7,"l":["你沒有動。","這句話讓前面所有事情突然換了一個方向。","「阻止我自己做什麼？」","夏禾看著你。","「我不知道。」","「妳不知道？」","「嗯。」","「那誰知道？」","她指了指第三卷錄音帶。","「你。」"],"pt":8},{"t":"妳說的那個人，是妳嗎","bd":"room","p":8,"l":["你看著她。","「哪一個我？」","夏禾說：","「四十歲的那一個。」","你把第三卷放進錄音機。","按下播放。"],"pt":8},{"t":"第三卷　1993.8.13","bd":"dark","p":1,"l":["沙沙聲。","這次沒有任何背景聲音。","只有呼吸。","一個男人的呼吸。","然後，一個比前兩卷成熟很多的聲音響起。","你立刻知道那是誰。","那仍然是你。","但不是二十歲的你。","男人說：","「如果你正在聽這卷錄音，表示事情又失敗了。」"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":2,"l":["短暫的沉默。","「我不知道現在聽見它的我是幾歲。」","「也不知道你還記得多少。」","「所以我只說最重要的。」","呼吸聲停了一下。","接著，四十歲的你說：","「不要讓1993年的我愛上夏禾。」","坐在窗邊的夏禾閉上了眼睛。","錄音裡的男人繼續說：","「無論發生什麼事。」"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":3,"l":["「無論她告訴你什麼。」","「都不要。」","又是一陣很長的沉默。","然後你聽見四十歲的自己說：","「因為她不是第一個死掉的人。」","磁帶仍然轉著。","「她是最後一個。」","「她是最後一個。」","錄音帶繼續轉動。","你沒有去看夏禾。"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":4,"l":["因為四十歲的你的聲音又響了起來。","「在她以前，還有三個人。」","「第一個，我不知道名字。」","「第二個叫陳國安。」","「第三個......」","錄音忽然停頓了一下。","你聽見男人吸了一口氣。","「第三個是爸。」","你的手指動了一下。","這一次，夏禾睜開眼睛。"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":5,"l":["她看著你。","你仍然沒有說話。","錄音裡的男人繼續：","「我不知道你現在聽到這個名字是什麼感覺。如果你是二十歲的我，他現在應該還活著。如果你是四十歲的我，那你已經知道發生什麼事。」","「如果你比我更老......」","男人停了一下。","「那我希望你已經原諒他了。」","房間裡只剩磁帶轉動的聲音。","你忽然發現，自己已經不再把這些錄音當成某種神祕事件的證據。","因為說話的人開始知道一些只有你知道的事情。"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":6,"l":["不是姓名。","不是生日。","而是那些很難偽造的停頓。","說到某些人的時候，你會停多久。","哪些事情你嘴上說沒什麼，其實不願意碰。","甚至連那句「希望你已經原諒他了」都不像一個陌生人會編出來的台詞。","那比較像你會對自己說的話。","錄音繼續。","「我先說規則。」","你皺起眉。"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":7,"l":["「到目前為止，我知道的只有四條。」","「第一，我們不能回到任意時間。」","「每一次，都只能回到1993年8月11日到17日這七天。」","「第二，每一次回來，事情都可以改變。」","「第三，被改變的事情不一定會立刻消失。有些東西會留下來。」","「錄音帶就是其中之一。」","你低頭看向桌上的七卷磁帶。","「第四------」","錄音裡的男人停了很久。","「我們能改變的次數有限。」"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":8,"l":["你抬起頭。","夏禾也看向錄音機。","「我不知道為什麼。」","「也不知道上限是多少。」","「但是每改變一次重要的事情，就會有東西開始消失。」","「第一次，我忘了一個地址。」","「第二次，我忘了一個人的臉。」","「第三次......」","男人笑了一聲。","很短。"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":9,"l":["沒有任何愉快。","「我忘了我女兒小時候叫我爸爸的聲音。」","你的目光停在錄音機上。","「所以如果你現在也想改變什麼，先聽我一句。」","「不要。」","「至少，不要因為後悔就改。」","「後悔不是理由。」","「因為你永遠不知道，你現在願意拿什麼去換。」","磁帶裡突然出現另一個聲音。","是夏禾。"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":10,"l":["「時間到了。」","四十歲的你回答：","「我知道。」","「你還有多久？」","「不知道。」","「那快一點。」","男人的語速開始加快。","「1993年的我會在這七天裡發現一件事情。我不知道是什麼。我只知道他發現之後，開始相信未來是可以被改寫的。」","「他第一次改變的事情很小。」","「他救了一隻狗。」"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":11,"l":["你愣了一下。","夏禾也微微低下頭。","「8月13日下午四點二十分左右，舊港區，一輛貨車會撞死一隻黃色的狗。」","「他把狗救了。」","「那是第一次。」","「我們當時都覺得很高興。」","「因為它證明了一件事。」","「未來不是固定的。」","磁帶裡，夏禾忽然說：","「不要再說了。」"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":12,"l":["男人沒有理她。","「第二次，他救了一個小孩。」","「第三次，他阻止了一場火災。」","「第四次------」","聲音停住。","很久。","「他開始救自己認識的人。」","房間裡的空氣像忽然變重了一點。","「問題就是從那裡開始。」","「因為如果你知道明天誰會死，你會不會救？」"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":13,"l":["「當然會。」","「如果你知道十年後呢？」","「也會。」","「如果救一個人的代價，是另一個你不認識的人會死呢？」","「你還會不會救？」","「如果那個人是你的朋友，而另一個只是新聞上的名字呢？」","「如果是你的父親呢？」","「如果是你的孩子呢？」","錄音裡沒有答案。","只有四十歲的你自己的呼吸聲。"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":14,"l":["「1993年的我後來發現了一個方法。」","「他認為只要做得夠多次，就能找到一條路。」","「一條所有人都活著的路。」","你第一次開口。","雖然知道錄音裡的人聽不見。","「不可能。」","夏禾看向你。","錄音裡，四十歲的你幾乎就在同一時間說：","「不存在。」","你怔了一下。"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":15,"l":["「我花了很久才明白。」","「不存在所有人都活著的那條路。」","「不是因為我們還沒有找到。」","「而是因為有些人的人生，本來就是由另外一些人的選擇連起來的。」","「拿掉一件事，後面不只是少掉一件事。」","「整條路都會變。」","錄音裡傳來夏禾的聲音。","「夠了。」","這一次，她似乎在哭。","「不要讓他知道。」"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":16,"l":["四十歲的你安靜了一會兒。","「他遲早會知道。」","「可是------」","「夏禾。」","男人叫了她的名字。","「如果這一次還失敗，下一個我必須知道自己在選什麼。」","接著是一段很長的雜訊。","磁帶似乎曾經受損。","幾秒後，聲音重新出現。","但中間顯然少了一段。"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":17,"l":["你只聽見男人說：","「------所以不要相信死亡名單。」","「什麼名單？」你下意識問。","錄音當然沒有回答。","「那不是預言。」","「記住。」","「死亡名單不是告訴你誰會死。」","「它是------」","喀。","錄音停了。"],"pt":18},{"t":"第三卷　1993.8.13","bd":"dark","p":18,"l":["你等了幾秒。","沒有聲音。","「沒了？」","夏禾點頭。","「第三卷就到這裡。」","「最後一句是什麼？」","「不知道。」","「磁帶壞了？」"],"pt":18},{"t":"第三卷就到這裡","bd":"room","p":1,"l":["「一直都是這樣。」","你把第三卷退出來。"],"pt":1}];
 const TOTAL = SCENES.reduce((a,s)=>a+s.l.length,0);
+const OFFSET = []; SCENES.reduce((a,s,i)=>(OFFSET[i]=a,a+s.l.length),0);
+const CHAPS = []; SCENES.forEach((s,i)=>{ if(!i||SCENES[i-1].t!==s.t) CHAPS.push({t:s.t,first:i,n:0});
+  CHAPS[CHAPS.length-1].n += s.l.length; });
+const CN = ['','一','二','三','四','五','六','七','八','九','十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十'];
+const chapOf = si => { let c=0; CHAPS.forEach((ch,k)=>{ if(ch.first<=si) c=k; }); return c; };
+
+/* ================= 場景圖 =================
+   座標沿用 400 寬的畫布；每張圖用 VB 指定看的是哪一段高度（視窗 400×440）。
+   Z(深度, 內容)：深度愈大，鏡頭移動時位移愈多（0 = 不動的遠景）。 */
+const VB = {letter:150,vision:150,street:170,lobby:150,corridor:170,door:240,door2:150,room:80,tape:110,market:150,dark:150};
+const Z = (k,s)=>`<g class="z" data-z="${k}">${s}</g>`;
+const BG = (fill,more='')=>`<rect x="-40" y="-40" width="480" height="800" fill="${fill}" ${more}/>`;
+const SVG = (bd,inner)=>`<svg viewBox="0 ${VB[bd]} 400 440" preserveAspectRatio="xMidYMid slice">${DEFS}${inner}</svg>`;
 
 const CURTAIN = (x,y,w,h,o)=>`
-<g opacity="${o}">
- <path d="M${x} ${y} Q${x+w*.32} ${y+h*.2} ${x+w*.2} ${y+h*.55} T${x+w*.34} ${y+h}
-   L${x+w} ${y+h} L${x+w} ${y} Z" fill="url(#curtG)">
+<g class="curt" opacity="${o}">
+ <path d="M${x} ${y} Q${x+w*.32} ${y+h*.2} ${x+w*.2} ${y+h*.55} T${x+w*.34} ${y+h} L${x+w} ${y+h} L${x+w} ${y} Z" fill="url(#curtG)">
   <animate attributeName="d" dur="7s" repeatCount="indefinite"
    values="M${x} ${y} Q${x+w*.32} ${y+h*.2} ${x+w*.2} ${y+h*.55} T${x+w*.34} ${y+h} L${x+w} ${y+h} L${x+w} ${y} Z;
            M${x} ${y} Q${x+w*.62} ${y+h*.16} ${x+w*.44} ${y+h*.5} T${x+w*.58} ${y+h} L${x+w} ${y+h} L${x+w} ${y} Z;
            M${x} ${y} Q${x+w*.32} ${y+h*.2} ${x+w*.2} ${y+h*.55} T${x+w*.34} ${y+h} L${x+w} ${y+h} L${x+w} ${y} Z"/>
+ </path>
+ <path d="M${x+w} ${y} L${x+w} ${y+h} L${x+w*.74} ${y+h} Q${x+w*.86} ${y+h*.5} ${x+w*.8} ${y} Z" fill="url(#curtG)" opacity=".7">
+  <animate attributeName="d" dur="9s" repeatCount="indefinite"
+   values="M${x+w} ${y} L${x+w} ${y+h} L${x+w*.74} ${y+h} Q${x+w*.86} ${y+h*.5} ${x+w*.8} ${y} Z;
+           M${x+w} ${y} L${x+w} ${y+h} L${x+w*.66} ${y+h} Q${x+w*.9} ${y+h*.5} ${x+w*.76} ${y} Z;
+           M${x+w} ${y} L${x+w} ${y+h} L${x+w*.74} ${y+h} Q${x+w*.86} ${y+h*.5} ${x+w*.8} ${y} Z"/>
  </path>
 </g>`;
 
@@ -214,275 +327,352 @@ const DEFS = `<defs>
  <linearGradient id="duskG" x1="0" y1="0" x2="0" y2="1">
    <stop offset="0%" stop-color="#1D2C38"/><stop offset="46%" stop-color="#4A4038"/>
    <stop offset="72%" stop-color="#A96B3C"/><stop offset="100%" stop-color="#2A1D18"/></linearGradient>
- <linearGradient id="seaG" x1="0" y1="0" x2="0" y2="1">
-   <stop offset="0%" stop-color="#2A3B40"/><stop offset="100%" stop-color="#0D1417"/></linearGradient>
+ <linearGradient id="winG" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0%" stop-color="#3B4C55"/><stop offset="62%" stop-color="#8C6E4C"/>
+   <stop offset="100%" stop-color="#C08A4E"/></linearGradient>
  <filter id="soft"><feGaussianBlur stdDeviation="7"/></filter>
  <filter id="soft2"><feGaussianBlur stdDeviation="2.2"/></filter>
 </defs>`;
 
-const V='0 0 400 700';
+const CASSETTE = i => { const x=188+(i%4)*28, y=396+Math.floor(i/4)*36;
+  return `<g class="cas" data-i="${i}" transform="translate(${x} ${y})">
+   <rect width="24" height="30" rx="1.5" fill="#3B3229" stroke="#544839" stroke-width=".7"/>
+   <rect x="4" y="4" width="16" height="7" fill="#C9BDA2" opacity=".7"/>
+   <text x="12" y="9.6" font-size="4.6" text-anchor="middle" fill="#3B3226" font-family="serif">8.${11+i}</text>
+   <circle cx="9" cy="20" r="3.4" fill="none" stroke="#6B6055" stroke-width=".8"/>
+   <circle cx="16" cy="20" r="3.4" fill="none" stroke="#6B6055" stroke-width=".8"/></g>`; };
+
 const ART = {
 
-letter:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="#0C1215"/>
- <ellipse cx="200" cy="380" rx="240" ry="190" fill="url(#lampG)">
-   <animate attributeName="opacity" dur="9s" repeatCount="indefinite" values=".85;1;.9;.85"/></ellipse>
- <rect y="470" width="400" height="230" fill="#181008"/>
- <rect y="468" width="400" height="3" fill="#2A1C0E"/>
- <g transform="rotate(-4 200 400)">
+letter:()=>SVG('letter',`
+ ${BG('#0C1215')}
+ ${Z(.1,`<ellipse cx="200" cy="380" rx="250" ry="200" fill="url(#lampG)">
+   <animate attributeName="opacity" dur="9s" repeatCount="indefinite" values=".85;1;.9;.85"/></ellipse>`)}
+ ${Z(.3,`<rect x="-40" y="470" width="480" height="300" fill="#181008"/>
+   <rect x="-40" y="468" width="480" height="3" fill="#2A1C0E"/>
+   <ellipse cx="200" cy="500" rx="170" ry="26" fill="#F2C57E" opacity=".06"/>`)}
+ ${Z(.55,`<g transform="rotate(-4 200 400)">
+   <rect x="100" y="358" width="208" height="126" fill="#000" opacity=".35" filter="url(#soft2)"/>
    <rect x="96" y="352" width="208" height="126" fill="#D9CDB2"/>
    <rect x="96" y="352" width="208" height="126" fill="none" stroke="#A8987A" stroke-width=".7"/>
    <path d="M96 352 L200 424 L304 352" fill="none" stroke="#B5A585" stroke-width=".7"/>
-   <rect x="128" y="392" width="86" height="1.4" fill="#3A3427" opacity=".8"/>
-   <rect x="128" y="404" width="62" height="1.4" fill="#3A3427" opacity=".65"/>
- </g>
- <g transform="rotate(7 250 300)">
+   <rect x="128" y="436" width="86" height="1.4" fill="#3A3427" opacity=".8"/>
+   <rect x="128" y="448" width="62" height="1.4" fill="#3A3427" opacity=".65"/></g>`)}
+ ${Z(.9,`<g transform="rotate(7 250 300)">
+   <rect x="200" y="258" width="132" height="84" rx="2" fill="#000" opacity=".4" filter="url(#soft2)"/>
    <rect x="196" y="252" width="132" height="84" rx="2" fill="#F0E8D4"/>
    <rect x="196" y="252" width="132" height="84" rx="2" fill="none" stroke="#C4B694" stroke-width=".8"/>
-   <text x="262" y="290" font-family="monospace" font-size="14" letter-spacing="3"
-     text-anchor="middle" fill="#3B3226">海汐館</text>
-   <text x="262" y="314" font-family="monospace" font-size="19" letter-spacing="5"
-     text-anchor="middle" fill="#8E3B32">203</text>
- </g>
-</svg>`,
+   <text x="262" y="284" font-family="serif" font-size="14" letter-spacing="3" text-anchor="middle" fill="#3B3226">海汐館</text>
+   <text x="262" y="310" font-family="serif" font-size="20" letter-spacing="5" text-anchor="middle" fill="#8E3B32">203</text>
+   <rect x="218" y="318" width="88" height=".7" fill="#C4B694"/>
+   <text x="262" y="329" font-family="serif" font-size="7" letter-spacing="2" text-anchor="middle" fill="#7A6E58">1993.8.17</text></g>`)}
+`),
 
-vision:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="#EFE6D2"/>
- <rect width="400" height="700" fill="#FDF8EC" opacity=".7">
-   <animate attributeName="opacity" dur="6s" repeatCount="indefinite" values=".55;.85;.55"/></rect>
- <path d="M0 0 L110 130 L110 570 L0 700 Z" fill="#C9BDA2" opacity=".5"/>
- <path d="M400 0 L290 130 L290 570 L400 700 Z" fill="#C9BDA2" opacity=".5"/>
- <rect x="150" y="200" width="100" height="250" fill="#FFFDF6"/>
- ${CURTAIN(150,200,100,250,.95)}
- <ellipse cx="200" cy="470" rx="26" ry="70" fill="#9A8E77" opacity=".45" filter="url(#soft)"/>
- <rect width="400" height="700" fill="#FFF9EA" opacity=".3" filter="url(#soft)"/>
-</svg>`,
+vision:()=>SVG('vision',`
+ ${BG('#EFE6D2')}
+ ${BG('#FDF8EC','opacity=".7"><animate attributeName="opacity" dur="6s" repeatCount="indefinite" values=".55;.85;.55"/></rect><rect width="0" height="0"')}
+ ${Z(.25,`<path d="M-40 -40 L110 130 L110 570 L-40 740 Z" fill="#C9BDA2" opacity=".5"/>
+   <path d="M440 -40 L290 130 L290 570 L440 740 Z" fill="#C9BDA2" opacity=".5"/>`)}
+ ${Z(.5,`<rect x="150" y="200" width="100" height="250" fill="#FFFDF6"/>${CURTAIN(150,200,100,250,.95)}`)}
+ ${Z(.8,`<ellipse cx="200" cy="470" rx="26" ry="70" fill="#9A8E77" opacity=".45" filter="url(#soft)"/>`)}
+ <rect x="-40" y="-40" width="480" height="800" fill="#FFF9EA" opacity=".3"/>
+`),
 
-street:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="url(#duskG)"/>
- <g fill="#151417">
-   <rect x="0" y="250" width="118" height="450"/><rect x="118" y="304" width="86" height="396"/>
-   <rect x="204" y="228" width="104" height="472"/><rect x="308" y="290" width="92" height="410"/>
- </g>
- <g fill="#0C0B0D"><rect x="0" y="480" width="400" height="220"/></g>
- <g stroke="#0A090B" stroke-width="1.4" opacity=".9">
-   <path d="M0 214 L400 244"/><path d="M0 232 L400 262"/></g>
- <g fill="#D9A05B" opacity=".82">
-   <rect x="30" y="392" width="8" height="9"/><rect x="52" y="392" width="8" height="9"/>
-   <rect x="238" y="356" width="7" height="8"/><rect x="336" y="404" width="8" height="9"/></g>
- <circle cx="132" cy="336" r="5" fill="#F5D9A2">
-   <animate attributeName="opacity" dur="4.5s" repeatCount="indefinite" values=".85;1;.78;.92;.85"/></circle>
- <ellipse cx="132" cy="336" rx="52" ry="52" fill="url(#lampG)"/>
- <g transform="translate(206 384)">
-   <rect x="0" y="0" width="98" height="34" fill="#241C16" stroke="#3E3226" stroke-width=".8"/>
-   <text x="49" y="24" font-family="monospace" font-size="15" letter-spacing="4"
-     text-anchor="middle" fill="#B08B58" opacity=".9">海汐館</text>
- </g>
- <ellipse cx="200" cy="640" rx="200" ry="46" fill="#D9A05B" opacity=".05"/>
-</svg>`,
+street:()=>SVG('street',`
+ ${BG('url(#duskG)')}
+ ${Z(.12,`<g fill="#1B1B20" opacity=".8"><rect x="-40" y="300" width="70" height="460"/>
+   <rect x="150" y="320" width="64" height="440"/><rect x="330" y="280" width="110" height="480"/></g>`)}
+ ${Z(.28,`<g fill="#151417"><rect x="-40" y="250" width="158" height="510"/><rect x="118" y="304" width="86" height="456"/>
+   <rect x="204" y="228" width="104" height="532"/><rect x="308" y="290" width="132" height="470"/></g>
+   <g fill="#D9A05B" opacity=".82"><rect x="30" y="392" width="8" height="9"/><rect x="52" y="392" width="8" height="9"/>
+   <rect x="238" y="356" width="7" height="8"/><rect x="336" y="404" width="8" height="9"/>
+   <rect x="70" y="330" width="7" height="8" opacity=".5"/><rect x="262" y="300" width="7" height="8" opacity=".4"/></g>`)}
+ ${Z(.4,`<g stroke="#0A090B" stroke-width="1.4" opacity=".9" fill="none">
+   <path d="M-40 211 Q200 238 440 247"/><path d="M-40 229 Q200 258 440 265"/></g>`)}
+ ${Z(.6,`<g transform="translate(206 384)">
+   <rect width="98" height="34" fill="#241C16" stroke="#3E3226" stroke-width=".8"/>
+   <text x="49" y="24" font-family="serif" font-size="15" letter-spacing="4" text-anchor="middle" fill="#B08B58" opacity=".9">海汐館</text></g>
+   <rect x="130.5" y="336" width="3" height="170" fill="#0C0B0D"/>
+   <circle cx="132" cy="336" r="5" fill="#F5D9A2">
+     <animate attributeName="opacity" dur="4.5s" repeatCount="indefinite" values=".85;1;.78;.92;.85"/></circle>
+   <ellipse cx="132" cy="336" rx="56" ry="56" fill="url(#lampG)"/>`)}
+ ${Z(.85,`<rect x="-40" y="480" width="480" height="280" fill="#0C0B0D"/>
+   <ellipse cx="132" cy="494" rx="90" ry="12" fill="#D9A05B" opacity=".1"/>`)}
+`),
 
-lobby:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="#0A0E11"/>
- <rect x="0" y="0" width="400" height="700" fill="#131A1E"/>
- <path d="M60 120 L340 120 L318 700 L82 700 Z" fill="#0B1013"/>
- <g fill="#1D262B">
-   <path d="M96 470 Q120 424 152 470 L160 560 L88 560 Z" opacity=".9"/>
-   <path d="M232 486 Q258 442 288 486 L296 566 L224 566 Z" opacity=".8"/></g>
- <g transform="translate(128 196)">
-   <rect x="0" y="0" width="144" height="106" fill="none" stroke="#28323A" stroke-width="1"/>
-   ${[0,1,2,3].map(i=>`<g transform="translate(${16+i*30} 22)">
+lobby:()=>SVG('lobby',`
+ ${BG('#131A1E')}
+ ${Z(.2,`<path d="M60 120 L340 120 L318 760 L82 760 Z" fill="#0B1013"/>
+   <path d="M60 120 L340 120" stroke="#232D33" stroke-width="1"/>`)}
+ ${Z(.45,`<g transform="translate(128 196)">
+   <rect width="144" height="106" fill="#0E1418" stroke="#28323A" stroke-width="1"/>
+   ${[0,1,2,3,4].map(i=>`<g transform="translate(${20+i*26} 22)">
      ${i===2?'':`<rect x="-4" y="10" width="8" height="22" fill="#3D4A52"/>
      <circle cx="0" cy="6" r="5" fill="none" stroke="#3D4A52" stroke-width="1.6"/>`}
-     <text x="0" y="52" font-family="monospace" font-size="8" text-anchor="middle"
-       fill="${i===2?'#8E3B32':'#4A5760'}">${[201,202,203,204][i]}</text></g>`).join('')}
- </g>
- <g fill="#C9BDA2" opacity=".2">
-   ${Array.from({length:16},(_,i)=>`<circle cx="${28+i*23}" cy="${140+((i*97)%420)}" r="1">
-     <animate attributeName="cy" dur="${13+i%6}s" repeatCount="indefinite"
-       values="${140+((i*97)%420)};${100+((i*97)%420)};${140+((i*97)%420)}"/>
-     <animate attributeName="opacity" dur="${7+i%4}s" repeatCount="indefinite" values=".05;.3;.05"/>
-   </circle>`).join('')}
- </g>
-</svg>`,
+     <text x="0" y="52" font-family="serif" font-size="8" text-anchor="middle"
+       fill="${i===2?'#B4503F':'#4A5760'}">${201+i}</text></g>`).join('')}
+   </g>`)}
+ ${Z(.75,`<g fill="#232D33">
+   <path d="M96 470 Q120 424 152 470 L160 560 L88 560 Z"/>
+   <path d="M232 486 Q258 442 288 486 L296 566 L224 566 Z" opacity=".85"/></g>
+   <g fill="none" stroke="#2F3B42" stroke-width=".8" opacity=".7">
+   <path d="M104 480 Q122 452 144 480"/><path d="M240 496 Q258 468 280 496"/></g>`)}
+ <rect x="-40" y="-40" width="480" height="800" fill="#0A0E11" opacity=".25"/>
+`),
 
-corridor:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="#100C0A"/>
- <path d="M0 0 L140 210 L140 500 L0 700 Z" fill="#1A1512"/>
- <path d="M400 0 L260 210 L260 500 L400 700 Z" fill="#15100E"/>
- <path d="M140 500 L260 500 L400 700 L0 700 Z" fill="#241A13"/>
- <rect x="140" y="196" width="120" height="306" fill="#2A1F17"/>
- <rect x="158" y="228" width="84" height="200" fill="#FFF6E2"/>
- <rect x="158" y="228" width="84" height="200" fill="#FFE9C0" opacity=".8" filter="url(#soft)"/>
- ${CURTAIN(158,228,84,200,.9)}
- <path d="M158 428 L242 428 L316 700 L84 700 Z" fill="#F0C888" opacity=".17"/>
- <path d="M170 428 L228 428 L272 700 L128 700 Z" fill="#F7D9A4" opacity=".13">
-   <animate attributeName="opacity" dur="7s" repeatCount="indefinite" values=".09;.18;.09"/></path>
- <g fill="#0C0906">
-   <rect x="284" y="286" width="6" height="126" opacity=".55"/>
-   <rect x="112" y="286" width="6" height="126" opacity=".55"/></g>
- <rect width="400" height="700" fill="#3A2413" opacity=".12"/>
-</svg>`,
+corridor:()=>SVG('corridor',`
+ ${BG('#100C0A')}
+ ${Z(.25,`<path d="M-40 -60 L140 210 L140 500 L-40 760 Z" fill="#1A1512"/>
+   <path d="M440 -60 L260 210 L260 500 L440 760 Z" fill="#15100E"/>
+   <path d="M140 500 L260 500 L440 760 L-40 760 Z" fill="#241A13"/>
+   <rect x="140" y="196" width="120" height="306" fill="#2A1F17"/>
+   <rect x="158" y="228" width="84" height="200" fill="#FFF6E2"/>
+   <rect x="158" y="228" width="84" height="200" fill="#FFE9C0" opacity=".8" filter="url(#soft)"/>
+   <rect class="glow" x="130" y="200" width="140" height="260" fill="#FFF3D6" opacity=".5" filter="url(#soft)"/>
+   ${CURTAIN(158,228,84,200,.9)}
+   <path d="M158 428 L242 428 L316 760 L84 760 Z" fill="#F0C888" opacity=".17"/>
+   <path d="M170 428 L228 428 L272 760 L128 760 Z" fill="#F7D9A4" opacity=".13">
+     <animate attributeName="opacity" dur="7s" repeatCount="indefinite" values=".09;.18;.09"/></path>
+   <path class="glow" d="M150 428 L250 428 L350 760 L50 760 Z" fill="#FBE3B4" opacity=".16"/>`)}
+ ${Z(.6,`<g fill="#0C0906"><rect x="284" y="286" width="6" height="126" opacity=".55"/>
+   <rect x="110" y="286" width="6" height="126" opacity=".55"/></g>`)}
+ ${Z(1,`<g fill="#080605" opacity=".8"><rect x="352" y="170" width="12" height="440"/><rect x="36" y="170" width="12" height="440"/></g>`)}
+ <rect x="-40" y="-40" width="480" height="800" fill="#3A2413" opacity=".12"/>
+`),
 
-door:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="#0A0806"/>
- <rect x="46" y="52" width="308" height="600" fill="#2B2019"/>
- <rect x="46" y="52" width="308" height="600" fill="none" stroke="#171009" stroke-width="3"/>
- <rect x="76" y="92" width="248" height="234" fill="none" stroke="#1B130C" stroke-width="2.4"/>
- <rect x="76" y="360" width="248" height="248" fill="none" stroke="#1B130C" stroke-width="2.4"/>
- <text x="200" y="352" font-family="monospace" font-size="30" letter-spacing="9"
-   text-anchor="middle" fill="#9C7A45">203</text>
- <circle cx="316" cy="368" r="9" fill="#7E6234"/>
- <rect x="46" y="640" width="308" height="10" fill="#E8C489" opacity=".28">
-   <animate attributeName="opacity" dur="6s" repeatCount="indefinite" values=".16;.36;.2;.16"/></rect>
- <rect x="46" y="650" width="308" height="34" fill="#E8C489" opacity=".1" filter="url(#soft)"/>
- <path d="M0 0 L400 0 L400 700 L0 700 Z" fill="none"/>
- <rect width="400" height="700" fill="#000" opacity=".26"/>
-</svg>`,
+door:()=>SVG('door',`
+ ${BG('#0A0806')}
+ ${Z(.4,`<rect x="46" y="52" width="308" height="600" fill="#2B2019"/>
+   <rect x="46" y="52" width="308" height="600" fill="none" stroke="#171009" stroke-width="3"/>
+   <rect x="76" y="92" width="248" height="234" fill="none" stroke="#1B130C" stroke-width="2.4"/>
+   <rect x="76" y="380" width="248" height="228" fill="none" stroke="#1B130C" stroke-width="2.4"/>
+   <text x="200" y="356" font-family="serif" font-size="28" letter-spacing="9" text-anchor="middle" fill="#9C7A45">203</text>
+   <circle cx="316" cy="368" r="9" fill="#7E6234"/><circle cx="313" cy="365" r="3" fill="#B3955C" opacity=".6"/>`)}
+ ${Z(.5,`<rect x="46" y="640" width="308" height="10" fill="#E8C489" opacity=".28">
+     <animate attributeName="opacity" dur="6s" repeatCount="indefinite" values=".16;.36;.2;.16"/></rect>
+   <rect x="30" y="646" width="340" height="40" fill="#E8C489" opacity=".12" filter="url(#soft)"/>`)}
+ <rect x="-40" y="-40" width="480" height="800" fill="#000" opacity=".24"/>
+`),
 
-door2:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="#0A0806"/>
- <rect x="46" y="52" width="238" height="600" fill="#2B2019"/>
- <rect x="76" y="92" width="180" height="234" fill="none" stroke="#1B130C" stroke-width="2.4"/>
- <text x="166" y="352" font-family="monospace" font-size="30" letter-spacing="9"
-   text-anchor="middle" fill="#9C7A45">203</text>
- <rect x="284" y="52" width="70" height="600" fill="#F3D6A0" opacity=".2"/>
- <rect x="284" y="52" width="26" height="600" fill="#FBE9C4" opacity=".42" filter="url(#soft2)">
-   <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values=".3;.5;.34;.3"/></rect>
- <rect x="300" y="180" width="54" height="330" fill="#FFF3DC" opacity=".28"/>
- ${CURTAIN(300,180,54,330,.34)}
- <path d="M270 300 q22 -16 34 4 q-6 26 -22 30 q-16 2 -14 -12 Z" fill="#E6C79C" opacity=".8"/>
- <rect width="400" height="700" fill="#000" opacity=".22"/>
-</svg>`,
+door2:()=>SVG('door2',`
+ ${BG('#0A0806')}
+ ${Z(.2,`<rect x="284" y="52" width="70" height="600" fill="#F3D6A0" opacity=".2"/>
+   <rect x="284" y="52" width="26" height="600" fill="#FBE9C4" opacity=".42" filter="url(#soft2)">
+     <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values=".3;.5;.34;.3"/></rect>
+   <rect x="300" y="180" width="54" height="330" fill="#FFF3DC" opacity=".28"/>${CURTAIN(300,180,54,330,.34)}`)}
+ ${Z(.45,`<rect x="46" y="52" width="238" height="600" fill="#2B2019"/>
+   <rect x="76" y="92" width="180" height="234" fill="none" stroke="#1B130C" stroke-width="2.4"/>
+   <rect x="76" y="380" width="180" height="228" fill="none" stroke="#1B130C" stroke-width="2.4"/>
+   <text x="166" y="356" font-family="serif" font-size="28" letter-spacing="9" text-anchor="middle" fill="#9C7A45">203</text>`)}
+ ${Z(.7,`<path d="M270 300 q22 -16 34 4 q-6 26 -22 30 q-16 2 -14 -12 Z" fill="#E6C79C" opacity=".85"/>
+   <path d="M280 304 q12 -8 20 2" fill="none" stroke="#B89466" stroke-width=".8" opacity=".6"/>`)}
+ <rect x="-40" y="-40" width="480" height="800" fill="#000" opacity=".2"/>
+`),
 
-room:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="#0D0F11"/>
- <rect x="0" y="0" width="400" height="470" fill="#161A1D"/>
- <rect x="0" y="470" width="400" height="230" fill="#191512"/>
- <rect x="222" y="86" width="150" height="286" fill="#26333A"/>
- <rect x="232" y="96" width="130" height="266" fill="#4A5B62"/>
- <rect x="232" y="96" width="130" height="266" fill="#B98C55" opacity=".35"/>
- ${CURTAIN(232,96,130,266,.8)}
- <path d="M232 362 L362 362 L400 560 L206 560 Z" fill="#D2A86C" opacity=".1"/>
- <g transform="translate(38 388)">
-   <rect x="-8" y="76" width="266" height="10" fill="#241A12"/>
-   <rect x="0" y="0" width="132" height="76" rx="3" fill="#2E2A26"/>
-   <rect x="0" y="0" width="132" height="76" rx="3" fill="none" stroke="#463F37" stroke-width="1"/>
+room:()=>SVG('room',`
+ ${BG('#161A1D')}
+ ${Z(.15,`<rect x="-40" y="470" width="480" height="300" fill="#191512"/>
+   <rect x="-40" y="468" width="480" height="2" fill="#0E0C0A"/>`)}
+ ${Z(.3,`<rect x="222" y="86" width="150" height="286" fill="#26333A"/>
+   <rect x="232" y="96" width="130" height="266" fill="url(#winG)"/>
+   <rect class="glow" x="232" y="96" width="130" height="266" fill="#C9A26C" opacity=".35"/>
+   <rect x="232" y="300" width="130" height="62" fill="#1B2A30" opacity=".75"/>
+   <path d="M232 300 q32 -5 65 0 t65 0" fill="none" stroke="#9FB3B5" stroke-width=".8" opacity=".5">
+     <animate attributeName="d" dur="6s" repeatCount="indefinite"
+       values="M232 300 q32 -5 65 0 t65 0;M232 300 q32 5 65 0 t65 0;M232 300 q32 -5 65 0 t65 0"/></path>
+   <rect x="296" y="96" width="2" height="266" fill="#26333A"/>
+   ${CURTAIN(232,96,130,266,.78)}
+   <path d="M232 362 L362 362 L440 600 L190 600 Z" fill="#D2A86C" opacity=".1"/>
+   <path class="glow" d="M232 362 L362 362 L460 620 L170 620 Z" fill="#E3BD86" opacity=".1"/>`)}
+ ${Z(.42,`<g fill="#0E1215">
+   <ellipse cx="350" cy="262" rx="12" ry="14"/>
+   <path d="M338 258 q-4 22 2 40 l8 -6 Z"/>
+   <path d="M336 290 q14 -14 30 -4 q12 30 10 96 l-48 0 q-4 -56 8 -92 Z"/>
+   <rect x="322" y="372" width="62" height="6"/><rect x="326" y="378" width="5" height="96"/><rect x="376" y="378" width="5" height="96"/></g>
+   <path d="M339 252 q-3 20 0 42" fill="none" stroke="#C9A26C" stroke-width=".9" opacity=".4"/>`)}
+ ${Z(.5,`<g transform="translate(150 250)"><rect width="30" height="54" rx="3" fill="#20262A" stroke="#333C42" stroke-width=".8"/>
+   <rect x="5" y="6" width="20" height="12" rx="5" fill="#2D353A"/><circle cx="15" cy="34" r="7" fill="none" stroke="#3A444A" stroke-width="1"/>
+   <path d="M15 54 q-10 26 4 50 q8 14 -2 30" fill="none" stroke="#2B3338" stroke-width="1"/></g>`)}
+ ${Z(.7,`<rect x="14" y="464" width="300" height="10" fill="#241A12"/>
+   <rect x="24" y="474" width="8" height="120" fill="#1C140E"/><rect x="296" y="474" width="8" height="120" fill="#1C140E"/>
+   <g transform="translate(38 388)">
+   <rect width="132" height="76" rx="3" fill="#2E2A26"/>
+   <rect width="132" height="76" rx="3" fill="none" stroke="#463F37" stroke-width="1"/>
    <circle cx="38" cy="30" r="15" fill="none" stroke="#6B6055" stroke-width="1.4"/>
    <circle cx="94" cy="30" r="15" fill="none" stroke="#6B6055" stroke-width="1.4"/>
    <circle cx="38" cy="30" r="5" fill="#8A7D6C"/><circle cx="94" cy="30" r="5" fill="#8A7D6C"/>
    <rect x="16" y="56" width="100" height="8" fill="#1D1A17"/>
-   <rect x="20" y="58" width="10" height="4" fill="#8E3B32" opacity=".8">
-     <animate attributeName="opacity" dur="2.6s" repeatCount="indefinite" values=".3;.9;.3"/></rect>
-   ${Array.from({length:7},(_,i)=>`<g transform="translate(${150+ (i%4)*28} ${8+Math.floor(i/4)*36})">
-     <rect width="24" height="30" rx="1.5" fill="#3B3229" stroke="#544839" stroke-width=".7"/>
-     <rect x="4" y="4" width="16" height="7" fill="#C9BDA2" opacity=".65"/>
-     <circle cx="9" cy="20" r="3.4" fill="none" stroke="#6B6055" stroke-width=".8"/>
-     <circle cx="16" cy="20" r="3.4" fill="none" stroke="#6B6055" stroke-width=".8"/></g>`).join('')}
- </g>
- <rect width="400" height="700" fill="#0A0F14" opacity=".3"/>
-</svg>`,
+   <rect x="20" y="58" width="10" height="4" fill="#B4503F" opacity=".8">
+     <animate attributeName="opacity" dur="2.6s" repeatCount="indefinite" values=".3;.9;.3"/></rect></g>
+   <rect class="slot" x="34" y="384" width="140" height="84" rx="4"/>
+   <g transform="rotate(-6 54 470)"><rect x="20" y="452" width="64" height="12" fill="#A39676"/>
+     <rect x="20" y="452" width="64" height="3" fill="#6E3A2E"/></g>
+   ${[0,1,2,3,4,5,6].map(CASSETTE).join('')}`)}
+ <rect x="-40" y="-40" width="480" height="800" fill="#0A0F14" opacity=".28"/>
+`),
 
-tape:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="#0A0B0C"/>
- <ellipse cx="200" cy="330" rx="240" ry="200" fill="#2A2015" opacity=".55" filter="url(#soft)"/>
- <g transform="translate(200 320)">
+tape:()=>SVG('tape',`
+ ${BG('#0A0B0C')}
+ ${Z(.15,`<ellipse cx="200" cy="330" rx="250" ry="210" fill="#2A2015" opacity=".55" filter="url(#soft)"/>`)}
+ ${Z(.6,`<g transform="translate(200 320)">
    <rect x="-152" y="-96" width="304" height="192" rx="6" fill="#2A2723"/>
    <rect x="-152" y="-96" width="304" height="192" rx="6" fill="none" stroke="#4B443B" stroke-width="1.2"/>
    <rect x="-124" y="-68" width="248" height="112" rx="3" fill="#171512"/>
-   <g stroke="#7E7263" stroke-width="1.6" fill="none">
-     <circle cx="-58" cy="-12" r="40"/><circle cx="58" cy="-12" r="40"/></g>
-   <g>
-     <g transform="translate(-58 -12)"><g>
-       <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="4.2s" repeatCount="indefinite"/>
-       ${[0,60,120,180,240,300].map(a=>`<rect x="-1.6" y="-30" width="3.2" height="30" fill="#8E8271" transform="rotate(${a})"/>`).join('')}
-       <circle r="12" fill="#3B342C" stroke="#8E8271" stroke-width="1.4"/></g>
-       <circle r="30" fill="#1E1B17" opacity=".85"/>
-       <circle r="30" fill="none" stroke="#5A5145" stroke-width=".7"/></g>
-     <g transform="translate(58 -12)"><g>
-       <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="4.2s" repeatCount="indefinite"/>
-       ${[0,60,120,180,240,300].map(a=>`<rect x="-1.6" y="-20" width="3.2" height="20" fill="#8E8271" transform="rotate(${a})"/>`).join('')}
-       <circle r="12" fill="#3B342C" stroke="#8E8271" stroke-width="1.4"/></g>
-       <circle r="20" fill="#1E1B17" opacity=".85"/>
-       <circle r="20" fill="none" stroke="#5A5145" stroke-width=".7"/></g>
-   </g>
-   <rect x="-92" y="54" width="184" height="20" fill="#C9BDA2" opacity=".18"/>
+   <g stroke="#7E7263" stroke-width="1.6" fill="none"><circle cx="-58" cy="-12" r="40"/><circle cx="58" cy="-12" r="40"/></g>
+   ${[[-58,30],[58,20]].map(([cx,r])=>`<g transform="translate(${cx} -12)"><g>
+     <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="4.2s" repeatCount="indefinite"/>
+     ${[0,60,120,180,240,300].map(a=>`<rect x="-1.6" y="${-r}" width="3.2" height="${r}" fill="#8E8271" transform="rotate(${a})"/>`).join('')}
+     <circle r="12" fill="#3B342C" stroke="#8E8271" stroke-width="1.4"/></g>
+     <circle r="${r}" fill="#1E1B17" opacity=".85"/><circle r="${r}" fill="none" stroke="#5A5145" stroke-width=".7"/></g>`).join('')}
+   <rect x="-92" y="54" width="184" height="22" fill="#C9BDA2" opacity=".2"/>
+   <text x="0" y="69.5" font-family="serif" font-size="11" letter-spacing="4" text-anchor="middle" fill="#D9CDB2" opacity=".75" id="tapeLabel"></text>
    <rect x="-152" y="112" width="304" height="30" fill="#211E1A"/>
-   <g fill="#D9A05B">
-     ${Array.from({length:22},(_,i)=>`<rect x="${-138+i*13}" y="122" width="5" height="10">
-       <animate attributeName="height" dur="${.5+(i%7)*.13}s" repeatCount="indefinite"
-         values="2;${4+(i*5)%15};2"/>
-       <animate attributeName="y" dur="${.5+(i%7)*.13}s" repeatCount="indefinite"
-         values="131;${127-(i*5)%15+4};131"/></rect>`).join('')}
-   </g>
- </g>
- <rect width="400" height="700" fill="#000" opacity=".2"/>
-</svg>`,
+   <g fill="#D9A05B">${Array.from({length:22},(_,i)=>`<rect x="${-138+i*13}" y="122" width="5" height="10">
+     <animate attributeName="height" dur="${.5+(i%7)*.13}s" repeatCount="indefinite" values="2;${4+(i*5)%15};2"/>
+     <animate attributeName="y" dur="${.5+(i%7)*.13}s" repeatCount="indefinite" values="131;${127-(i*5)%15+4};131"/></rect>`).join('')}</g>
+ </g>`)}
+ <rect x="-40" y="-40" width="480" height="800" fill="#000" opacity=".18"/>
+`),
 
-market:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="#0E0A08"/>
- <rect width="400" height="360" fill="#1A120C"/>
- <g>${Array.from({length:26},(_,i)=>{const x=(i*67)%400,y=60+((i*113)%280),r=6+(i%5)*4;
+market:()=>SVG('market',`
+ ${BG('#0E0A08')}
+ <rect x="-40" y="-40" width="480" height="400" fill="#1A120C"/>
+ ${Z(.15,`<g>${Array.from({length:22},(_,i)=>{const x=(i*67)%440-20,y=160+((i*113)%190),r=6+(i%5)*4;
    return `<circle cx="${x}" cy="${y}" r="${r}" fill="#F2B65C" opacity="${.06+(i%4)*.035}" filter="url(#soft)">
    <animate attributeName="opacity" dur="${3+(i%6)}s" repeatCount="indefinite"
-     values="${.05+(i%4)*.03};${.16+(i%4)*.05};${.05+(i%4)*.03}"/></circle>`}).join('')}</g>
- <g fill="#D9A05B">${Array.from({length:14},(_,i)=>`<rect x="${12+i*29}" y="${146+(i%3)*16}" width="14" height="4" opacity=".7">
+     values="${.05+(i%4)*.03};${.16+(i%4)*.05};${.05+(i%4)*.03}"/></circle>`}).join('')}</g>`)}
+ ${Z(.3,`<path d="M-40 188 Q200 226 440 180" fill="none" stroke="#2A1D12" stroke-width="1"/>
+   <g fill="#F5D9A2">${Array.from({length:13},(_,i)=>{const x=-20+i*37,y=190+Math.sin((i+1)/13*Math.PI)*27;
+     return `<circle cx="${x}" cy="${y+4}" r="3"><animate attributeName="opacity" dur="${2.2+(i%5)*.6}s" repeatCount="indefinite" values=".5;1;.65;.5"/></circle>`}).join('')}</g>`)}
+ ${Z(.45,`<g fill="#D9A05B">${Array.from({length:14},(_,i)=>`<rect x="${12+i*29}" y="${256+(i%3)*16}" width="14" height="4" opacity=".7">
    <animate attributeName="opacity" dur="${2+(i%5)*.7}s" repeatCount="indefinite" values=".4;.9;.5;.4"/></rect>`).join('')}</g>
- <rect y="336" width="400" height="16" fill="#3A2A1A" opacity=".7"/>
- <g fill="#0B0806">
-   ${[36,88,140,196,252,308,356].map((x,i)=>`<g transform="translate(${x} ${430+(i%3)*16})">
-     <ellipse cx="0" cy="-46" rx="13" ry="15"/><path d="M-19 -32 q19 -14 38 0 l6 92 h-50 Z"/></g>`).join('')}
- </g>
- <rect y="560" width="400" height="140" fill="#0A0705"/>
- <ellipse cx="200" cy="566" rx="220" ry="30" fill="#D9A05B" opacity=".07"/>
-</svg>`,
+   <rect x="-40" y="336" width="480" height="16" fill="#3A2A1A" opacity=".7"/>
+   <rect x="-40" y="352" width="480" height="230" fill="#2A1B10" opacity=".8"/>
+   <rect x="-40" y="352" width="480" height="60" fill="#D9A05B" opacity=".07"/>`)}
+ ${Z(.8,`<g fill="#0B0806">${[-8,36,88,140,196,252,308,356,404].map((x,i)=>`<g transform="translate(${x} ${430+(i%3)*16})">
+   <ellipse cx="0" cy="-46" rx="13" ry="15"/><path d="M-19 -32 q19 -14 38 0 l6 400 h-50 Z"/></g>`).join('')}</g>`)}
+ ${Z(1,`<ellipse cx="200" cy="570" rx="260" ry="34" fill="#D9A05B" opacity=".06"/>`)}
+`),
 
-dark:()=>`<svg viewBox="${V}" preserveAspectRatio="xMidYMid slice">${DEFS}
- <rect width="400" height="700" fill="#07090A"/>
- <ellipse cx="200" cy="350" rx="150" ry="150" fill="#151A1C" opacity=".9" filter="url(#soft)"/>
- <g transform="translate(200 340)">
+dark:()=>SVG('dark',`
+ ${BG('#07090A')}
+ ${Z(.2,`<ellipse cx="200" cy="350" rx="160" ry="160" fill="#151A1C" opacity=".9" filter="url(#soft)"/>`)}
+ ${Z(.5,`<g transform="translate(200 340)">
    <circle r="76" fill="none" stroke="#2E3437" stroke-width="1"/>
    <g><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="7s" repeatCount="indefinite"/>
      ${[0,60,120,180,240,300].map(a=>`<rect x="-2" y="-58" width="4" height="58" fill="#3E4649" transform="rotate(${a})"/>`).join('')}
      <circle r="17" fill="#0E1214" stroke="#3E4649" stroke-width="1.2"/></g>
-   <circle r="58" fill="#0A0D0E" opacity=".9"/><circle r="58" fill="none" stroke="#242A2C" stroke-width=".8"/>
- </g>
- <g stroke="#5E7F82" stroke-width="1.1" fill="none" opacity=".5">
-   <path d="M20 540 Q60 540 70 540 T120 540 T180 540 T250 540 T320 540 T380 540">
+   <circle r="58" fill="#0A0D0E" opacity=".9"/><circle r="58" fill="none" stroke="#242A2C" stroke-width=".8"/></g>`)}
+ ${Z(.85,`<g stroke="#5E7F82" stroke-width="1.1" fill="none" opacity=".55">
+   <path d="M-20 520 Q45 492 70 520 T120 520 T180 520 T250 520 T320 520 T420 520">
      <animate attributeName="d" dur="1.6s" repeatCount="indefinite"
-       values="M20 540 Q45 512 70 540 T120 540 T180 540 T250 540 T320 540 T380 540;
-               M20 540 Q45 566 70 540 T120 512 T180 566 T250 526 T320 552 T380 540;
-               M20 540 Q45 528 70 540 T120 552 T180 526 T250 556 T320 522 T380 540;
-               M20 540 Q45 512 70 540 T120 540 T180 540 T250 540 T320 540 T380 540"/></path>
- </g>
- <rect width="400" height="700" fill="#000" opacity=".18"/>
-</svg>`
+       values="M-20 520 Q45 492 70 520 T120 520 T180 520 T250 520 T320 520 T420 520;
+               M-20 520 Q45 546 70 520 T120 492 T180 546 T250 506 T320 532 T420 520;
+               M-20 520 Q45 508 70 520 T120 532 T180 506 T250 536 T320 502 T420 520;
+               M-20 520 Q45 492 70 520 T120 520 T180 520 T250 520 T320 520 T420 520"/></path></g>`)}
+ <rect x="-40" y="-40" width="480" height="800" fill="#000" opacity=".16"/>
+`)
 };
 
+/* ================= 互動定義（at = [x,y,寬,高]，與場景圖同一套座標） ================= */
 
+/* 碰了會多知道一些。say 是陣列時，依閱讀進度挑一句，愈後面愈不一樣。 */
+const PROBE = {
+ letter:[
+  {id:'card',at:[196,252,132,84],say:['你又看了一次那張房卡。海汐館 203，1993.8.17。','紙很新。一點都不像三十三年前的東西。']},
+  {id:'env',at:[96,362,208,116],say:['米白色的信封。沒有寄件地址。','鋼筆字。字跡很好看，卻有一種奇怪的老派感。']}],
+ vision:[{id:'fig',at:[168,400,64,140],say:['你看不清她的臉。','你想再看清楚一點，畫面就消失了。']}],
+ street:[
+  {id:'sign',at:[206,384,98,34],say:['褪色的招牌。海汐館。','世界上同名的旅館當然可能很多。你這樣告訴自己。']},
+  {id:'lamp',at:[106,310,52,52],say:['路燈剛亮。這座小城的傍晚來得比你想像中快。']},
+  {id:'pocket',at:[150,520,220,80],say:['你伸手進外套口袋，又摸到了那張房卡。','你還是不記得自己把它帶出門。']}],
+ lobby:[
+  {id:'keys',at:[128,196,144,106],say:['201、202、204、205。','只有 203 的位置是空的。','203 那格，從你進來到現在，一直是空的。']},
+  {id:'sheet',at:[88,424,72,136],say:['家具都罩著白布。這裡歇業很多年了。']},
+  {id:'door',at:[60,150,280,40],say:['只有門沒有鎖。']}],
+ corridor:[
+  {id:'win',at:[158,228,84,200],say:['白色窗簾被風一次又一次吹起。','和你那天看見的畫面一模一樣。','你在這扇窗前面站了一會兒。海就在外面，聽得見，看不見。']},
+  {id:'floor',at:[110,470,180,120],say:['夕陽在地板上留下一道很長的光。']}],
+ door:[
+  {id:'num',at:[150,326,100,44],say:['203。','門牌的漆掉了一角。']},
+  {id:'knob',at:[298,350,36,36],say:['你的手還放在門把附近。沒有轉下去。']},
+  {id:'gap',at:[46,630,308,30],say:['門縫底下有光。裡面有人。']}],
+ door2:[{id:'hand',at:[262,284,52,56],say:['一隻女人的手扶著門。','那隻手很年輕。']}],
+ room:[
+  {id:'deck',at:[38,388,132,76],say:['一台小型卡式錄音機。看起來還能用。']},
+  {id:'tapes',at:[186,392,116,72],say:['七卷錄音帶。每一卷都用同樣的字跡寫著日期。','1993.8.11 到 8.17。整整七天。','這七卷不是七天的日記那麼簡單。它們像是一個被刻意留下來的路徑。']},
+  {id:'win',at:[232,96,96,200],say:['窗外已經看不見夕陽了。','夏禾坐在窗邊。她沒有看你。']},
+  {id:'phone',at:[146,246,38,62],say:['牆上還掛著有線電話。線沒有拔。']},
+  {id:'mag',at:[18,444,70,24],say:['床頭放著一本已經泛黃的旅遊雜誌。日期是 1993 年。']}],
+ tape:[
+  {id:'reel',at:[100,264,200,96],say:['磁帶還在轉。','塑膠殼已經有些泛黃。']},
+  {id:'vu',at:[62,432,276,30],say:['音量條隨著聲音跳動。那是你自己的聲音。']}],
+ market:[{id:'crowd',at:[60,380,280,150],say:['夜市的聲音從錄音裡傳出來。有人叫賣，有人笑。','1993 年的夏夜。兩個二十歲左右的年輕人坐在路邊。']}],
+ dark:[{id:'reel',at:[124,264,152,152],say:['磁帶仍然轉著。','這一次沒有任何背景聲音。只有呼吸。']}]
+};
 
-/* ================= 聲音 ================= */
+/* 窗：先碰一次是「看」，之後每碰一次是開／關，畫面與海的聲音跟著變。key = 場景圖:熱區 id */
+const TOGGLE = {
+ 'corridor:win':{on:'你伸手把窗簾拉開。海風立刻灌進來，整條走廊都涼了。',off:'你把窗簾放下。走廊暗了一些。'},
+ 'room:win':{on:'你把窗推開一點。外面聽得見海。',off:'你把窗關上。房間裡只剩磁帶轉動的聲音。'}
+};
+
+/* 儀式動作：把錄音帶拖進機器。key = 場景 index，cas = 第幾卷（0 起算） */
+const GATE = {
+ 19:{cas:0,label:'把第一卷拖進錄音機',say:'你把標著 8月11日 的錄音帶放進機器，按下播放。'},
+ 31:{cas:1,label:'換上第二卷',say:'你把第一卷退出來，換上第二卷。'},
+ 53:{cas:2,label:'放進第三卷',say:'你把第三卷放進錄音機。按下播放。'}
+};
+const DECK_RECT = [38,388,132,76];
+
+/* 空氣裡的東西（畫在 canvas 上）：dust 塵、moth 繞著燈的蛾、bokeh 失焦的燈 */
+const ATMOS = {
+ letter:{k:'dust',n:22,c:'242,197,126',box:[70,220,260,260]},
+ vision:{k:'dust',n:38,c:'255,252,240',box:[0,150,400,440],s:1.7},
+ street:{k:'moth',n:7,c:'245,217,162',at:[132,336]},
+ lobby:{k:'dust',n:34,c:'201,189,162',box:[60,150,280,430]},
+ corridor:{k:'dust',n:36,c:'247,217,164',box:[110,230,180,380]},
+ door:{k:'dust',n:10,c:'232,196,137',box:[46,590,308,90]},
+ door2:{k:'dust',n:18,c:'251,233,196',box:[270,170,110,400]},
+ room:{k:'dust',n:26,c:'210,168,108',box:[190,100,230,420]},
+ market:{k:'bokeh',n:12,c:'242,182,92',box:[-20,170,440,200]},
+ tape:null, dark:null
+};
+
+/* ================= 聲音（全部即時合成，沒有音檔） ================= */
 const AudioEng=(()=>{
-  let ctx=null,master=null,noiseBuf=null,cur=null,padTimer=null,evtTimer=null,on=false;
+  let ctx=null,master=null,wet=null,noiseBuf=null,cur=null,padTimer=null,evtTimer=null,on=false,open=false,bd='letter';
   const CFG={letter:{f:340,q:.6,g:.016,lfo:.07},vision:{f:900,q:.4,g:.022,lfo:.13},
     street:{f:250,q:.7,g:.03,lfo:.09,evt:'train'},lobby:{f:1400,q:9,g:.014,lfo:0,hum:true},
     corridor:{f:430,q:.5,g:.05,lfo:.16,evt:'sea'},door:{f:300,q:.6,g:.024,lfo:.1},
-    door2:{f:340,q:.6,g:.03,lfo:.12},room:{f:380,q:.5,g:.032,lfo:.11,evt:'sea'},
+    door2:{f:340,q:.6,g:.03,lfo:.12,evt:'sea'},room:{f:380,q:.5,g:.032,lfo:.11,evt:'sea'},
     tape:{f:2600,q:.5,g:.02,lfo:0,hiss:true},market:{f:520,q:.5,g:.045,lfo:.22,evt:'market'},
     dark:{f:150,q:.8,g:.026,lfo:.05}};
   const CH=[[146.83,220,277.18],[130.81,196,246.94],[164.81,246.94,311.13],[110,164.81,220]];
   let chi=0;
   function mkNoise(){const n=ctx.sampleRate*4,b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);
     for(let i=0;i<n;i++)d[i]=Math.random()*2-1;return b;}
+  function mkVerb(){const n=ctx.sampleRate*3,b=ctx.createBuffer(2,n,ctx.sampleRate);
+    for(let c=0;c<2;c++){const d=b.getChannelData(c);
+      for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.6);}
+    const v=ctx.createConvolver();v.buffer=b;return v;}
   function init(){if(ctx)return;ctx=new (window.AudioContext||window.webkitAudioContext)();
-    master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);noiseBuf=mkNoise();}
+    master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);noiseBuf=mkNoise();
+    const verb=mkVerb(),vg=ctx.createGain();vg.gain.value=.5;wet=ctx.createGain();wet.gain.value=1;
+    wet.connect(verb);verb.connect(vg);vg.connect(master);}
   function stopCur(){if(!cur)return;try{cur.g.gain.setTargetAtTime(0,ctx.currentTime,.5);
     const c=cur;setTimeout(()=>{try{c.src.stop()}catch(e){}c.nodes.forEach(n=>{try{n.stop()}catch(e){}})},1800);}catch(e){}cur=null;}
-  function ping(t0){if(!on||!ctx)return;const t=ctx.currentTime;
-    if(t0==='train'){[0,.55].forEach(d=>{const o=ctx.createOscillator(),g=ctx.createGain();
+  function burst(dur,type,f0,f1,peak,dest){const t=ctx.currentTime,s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();
+    s.buffer=noiseBuf;s.loop=true;f.type=type;f.frequency.setValueAtTime(f0,t);f.frequency.linearRampToValueAtTime(f1,t+dur*.45);
+    f.frequency.linearRampToValueAtTime(f0,t+dur);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+dur*.4);
+    g.gain.linearRampToValueAtTime(0,t+dur);s.connect(f);f.connect(g);g.connect(dest||master);s.start(t,Math.random()*3);s.stop(t+dur+.05);}
+  function ping(k){if(!on||!ctx)return;const t=ctx.currentTime;
+    if(k==='sea'){burst(6.5,'lowpass',260,open?1500:760,open?.075:.03);}
+    if(k==='train'){[0,.55].forEach(d=>{const o=ctx.createOscillator(),g=ctx.createGain();
       o.type='sine';o.frequency.value=880;g.gain.setValueAtTime(0,t+d);
       g.gain.linearRampToValueAtTime(.027,t+d+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d+.9);
-      o.connect(g);g.connect(master);o.start(t+d);o.stop(t+d+1);});}
-    if(t0==='market'){const o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter();
+      o.connect(g);g.connect(master);g.connect(wet);o.start(t+d);o.stop(t+d+1);});}
+    if(k==='market'){const o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter();
       o.type='sawtooth';o.frequency.setValueAtTime(70,t);o.frequency.linearRampToValueAtTime(130,t+1.1);
       o.frequency.linearRampToValueAtTime(58,t+2.4);f.type='lowpass';f.frequency.value=420;
       g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.013,t+.5);g.gain.linearRampToValueAtTime(0,t+2.4);
@@ -490,10 +680,10 @@ const AudioEng=(()=>{
   function pad(){if(!on||!ctx)return;const t=ctx.currentTime,ch=CH[chi++%CH.length];
     ch.forEach((fr,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();
       o.type=i===0?'triangle':'sine';o.frequency.value=fr;o.detune.value=(i-1)*4;
-      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.011,t+4);
-      g.gain.linearRampToValueAtTime(.008,t+9);g.gain.linearRampToValueAtTime(0,t+13);
-      o.connect(g);g.connect(master);o.start(t);o.stop(t+13.5);});}
-  function setScene(bd){if(!ctx)return;const c=CFG[bd]||CFG.room;stopCur();
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.009,t+4);
+      g.gain.linearRampToValueAtTime(.007,t+9);g.gain.linearRampToValueAtTime(0,t+13);
+      o.connect(g);g.connect(master);g.connect(wet);o.start(t);o.stop(t+13.5);});}
+  function setScene(b){bd=b;if(!ctx||!on)return;const c=CFG[b]||CFG.room;stopCur();
     const src=ctx.createBufferSource();src.buffer=noiseBuf;src.loop=true;
     const f=ctx.createBiquadFilter();f.type=c.hiss?'highpass':(c.hum?'bandpass':'lowpass');
     f.frequency.value=c.f;f.Q.value=c.q;const g=ctx.createGain();g.gain.value=0;
@@ -504,214 +694,316 @@ const AudioEng=(()=>{
     if(c.hum){const o=ctx.createOscillator(),og=ctx.createGain();o.type='sine';o.frequency.value=100;
       og.gain.value=.006;o.connect(og);og.connect(master);o.start();nodes.push(o);}
     cur={src,g,nodes};clearInterval(evtTimer);
-    if(c.evt)evtTimer=setInterval(()=>{if(Math.random()<.45)ping(c.evt);},9000);}
-  function blip(kind){if(!on||!ctx)return;const t=ctx.currentTime;
-    const o=ctx.createOscillator(),g=ctx.createGain();
-    o.type=kind==='ok'?'sine':'triangle';
-    o.frequency.setValueAtTime(kind==='ok'?520:300,t);
-    o.frequency.exponentialRampToValueAtTime(kind==='ok'?760:220,t+.11);
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.03,t+.012);
-    g.gain.exponentialRampToValueAtTime(.0001,t+.3);
-    o.connect(g);g.connect(master);o.start(t);o.stop(t+.32);}
-  return{start(bd){init();if(ctx.state==='suspended')ctx.resume();on=true;
-      master.gain.setTargetAtTime(.9,ctx.currentTime,1.2);setScene(bd);
-      clearInterval(padTimer);pad();padTimer=setInterval(pad,13000);},
-    scene(bd){if(on)setScene(bd);},blip,
-    toggle(bd){if(!ctx){this.start(bd);return true;}on=!on;
-      if(on){ctx.resume();master.gain.setTargetAtTime(.9,ctx.currentTime,.8);setScene(bd);
-        clearInterval(padTimer);pad();padTimer=setInterval(pad,13000);}
-      else{master.gain.setTargetAtTime(0,ctx.currentTime,.5);clearInterval(padTimer);clearInterval(evtTimer);}
-      return on;}};
+    if(c.evt){const every=c.evt==='sea'?7600:9000,p=c.evt==='sea'?.8:.45;
+      evtTimer=setInterval(()=>{if(Math.random()<p)ping(c.evt);},every);
+      if(c.evt==='sea')setTimeout(()=>ping('sea'),900);}}
+  function run(){ctx.resume();master.gain.setTargetAtTime(.9,ctx.currentTime,1);setScene(bd);
+    clearInterval(padTimer);pad();padTimer=setInterval(pad,13000);}
+  return{
+    get on(){return on;},
+    set(v){ if(v){init();on=true;run();}
+      else if(ctx){on=false;master.gain.setTargetAtTime(0,ctx.currentTime,.4);clearInterval(padTimer);clearInterval(evtTimer);stopCur();}
+      return on;},
+    scene(b){bd=b;if(on)setScene(b);},
+    window(v){open=v;if(on&&v)ping('sea');},
+    blip(kind){if(!on||!ctx)return;const t=ctx.currentTime,o=ctx.createOscillator(),g=ctx.createGain();
+      o.type=kind==='ok'?'sine':'triangle';o.frequency.setValueAtTime(kind==='ok'?520:300,t);
+      o.frequency.exponentialRampToValueAtTime(kind==='ok'?760:220,t+.11);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.026,t+.012);
+      g.gain.exponentialRampToValueAtTime(.0001,t+.3);o.connect(g);g.connect(master);g.connect(wet);o.start(t);o.stop(t+.32);},
+    clunk(){if(!on||!ctx)return;const t=ctx.currentTime;burst(.09,'lowpass',900,1400,.12);
+      setTimeout(()=>{if(on)burst(.07,'bandpass',1800,2400,.07);},130);
+      const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.setValueAtTime(110,t);
+      o.frequency.exponentialRampToValueAtTime(48,t+.16);g.gain.setValueAtTime(.09,t);
+      g.gain.exponentialRampToValueAtTime(.0001,t+.2);o.connect(g);g.connect(master);o.start(t);o.stop(t+.22);},
+    page(){if(!on||!ctx)return;burst(.22,'highpass',2400,5200,.012);}
+  };
 })();
 
-/* ================= 互動定義 ================= */
-/* at = [x,y,w,h] 對應 SVG viewBox 0 0 400 700 */
-
-/* 第三層:觸摸回饋。依背景登記,同背景的場景都有。
-   say 是陣列時,依進度(已讀場景數)挑一句,愈後面愈不一樣。 */
-const PROBE = {
- letter:[
-  {id:'card',at:[196,252,132,84],say:['你又看了一次那張房卡。海汐館 203,1993.8.17。','紙很新。一點都不像三十三年前的東西。']},
-  {id:'env',at:[96,352,208,126],say:['米白色的信封。沒有寄件地址。','鋼筆字。字跡很好看,卻有一種奇怪的老派感。']}],
- vision:[{id:'fig',at:[168,400,64,140],say:['你看不清她的臉。','你想再看清楚一點,畫面就消失了。']}],
- street:[
-  {id:'sign',at:[206,384,98,34],say:['褪色的招牌。海汐館。','世界上同名的旅館當然可能很多。你這樣告訴自己。']},
-  {id:'lamp',at:[106,310,52,52],say:['路燈剛亮。這座小城的傍晚來得比你想像中快。']},
-  {id:'pocket',at:[0,560,400,140],say:['你伸手進外套口袋,又摸到了那張房卡。','你還是不記得自己把它帶出門。']}],
- lobby:[
-  {id:'keys',at:[128,196,144,106],say:['201、202、204、205。','只有 203 的位置是空的。','203 那格,從你進來到現在,一直是空的。']},
-  {id:'sheet',at:[88,424,72,136],say:['家具都罩著白布。這裡歇業很多年了。']},
-  {id:'door',at:[60,120,280,80],say:['只有門沒有鎖。']}],
- corridor:[
-  {id:'win',at:[158,228,84,200],say:['白色窗簾被風一次又一次吹起。','和你那天看見的畫面一模一樣。','你在這扇窗前面站了一會兒。海就在外面,聽得見,看不見。']},
-  {id:'floor',at:[84,428,232,272],say:['夕陽在地板上留下一道很長的光。']}],
- door:[
-  {id:'num',at:[150,320,100,44],say:['203。','門牌的漆掉了一角。']},
-  {id:'knob',at:[300,352,32,32],say:['你的手還放在門把附近。沒有轉下去。']},
-  {id:'gap',at:[46,636,308,20],say:['門縫底下有光。裡面有人。']}],
- door2:[{id:'hand',at:[264,286,48,52],say:['一隻女人的手扶著門。','那隻手很年輕。']}],
- room:[
-  {id:'deck',at:[38,388,132,76],say:['一台小型卡式錄音機。看起來還能用。']},
-  {id:'tapes',at:[186,392,116,72],say:['七卷錄音帶。每一卷都用同樣的字跡寫著日期。','1993.8.11 到 8.17。整整七天。','這七卷不是七天的日記那麼簡單。它們像是一個被刻意留下來的路徑。']},
-  {id:'win',at:[232,96,130,266],say:['窗外已經看不見夕陽了。','夏禾坐在窗邊。她沒有看你。']},
-  {id:'phone',at:[300,300,40,40],say:['牆上還掛著有線電話。線沒有拔。']},
-  {id:'mag',at:[20,466,70,30],say:['床頭放著一本已經泛黃的旅遊雜誌。日期是 1993 年。']}],
- tape:[
-  {id:'reel',at:[100,240,200,160],say:['磁帶還在轉。','塑膠殼已經有些泛黃。']},
-  {id:'vu',at:[62,432,276,30],say:['音量條隨著聲音跳動。那是你自己的聲音。']}],
- market:[{id:'crowd',at:[0,380,400,200],say:['夜市的聲音從錄音裡傳出來。有人叫賣,有人笑。','1993 年的夏夜。兩個二十歲左右的年輕人坐在路邊。']}],
- dark:[{id:'reel',at:[124,264,152,152],say:['磁帶仍然轉著。','這一次沒有任何背景聲音。只有呼吸。']}]
+/* ================= 記住進度與設定 ================= */
+const KEY='beyond-the-tide.reader.v2';
+const Store={
+  load(){try{return JSON.parse(localStorage.getItem(KEY))||{};}catch(e){return {};}},
+  save(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){}}
 };
+const saved=Store.load();
+const S={ si:0, li:-1, done:new Set(saved.done||[]), gates:new Set(saved.gates||[]), tog:{},
+  dir:saved.dir==='h'?'h':'v', fs:['s','m','l'].includes(saved.fs)?saved.fs:'m', hints:saved.hints!==false,
+  auto:false, ended:false };
+function persist(){Store.save({si:S.si,li:S.li,done:[...S.done],gates:[...S.gates],dir:S.dir,fs:S.fs,hints:S.hints});}
 
-/* 第二層:狀態切換 */
-const TOGGLE = {
- corridor:{id:'curtain',at:[158,228,84,200],
-   on:'你伸手把窗簾拉開。海風立刻灌進來,整條走廊都涼了。',
-   off:'你把窗簾放下。走廊暗了一些。'},
- room:{id:'curtain',at:[232,96,130,266],
-   on:'你把窗推開一點。外面聽得見海。',
-   off:'你把窗關上。房間裡只剩磁帶轉動的聲音。'}
-};
-
-/* 第一層:儀式動作。key = 場景 index */
-const GATE = {
- 19:{id:'t1',label:'把第一卷拖進錄音機',at:[180,386,40,46],to:[38,388,132,76],
-     say:'你把標著 8月11日 的錄音帶放進機器,按下播放。'},
- 31:{id:'t2',label:'換上第二卷',at:[208,386,40,46],to:[38,388,132,76],
-     say:'你把第一卷退出來,換上第二卷。'},
- 53:{id:'t3',label:'放進第三卷',at:[236,386,40,46],to:[38,388,132,76],
-     say:'你把第三卷放進錄音機。按下播放。'}
-};
-
-/* ================= 播放 ================= */
-let si=0,li=-1,curBd=null,busy=false,done=new Set(),tog={},gateOn=null,showHints=true;
+/* ================= 畫面 ================= */
 const $=id=>document.getElementById(id);
-const artEl=$('art'),linesEl=$('lines'),hotEl=$('hot');
+const artEl=$('art'),flow=$('flow'),pageEl=$('page');
+const NS='http://www.w3.org/2000/svg';
+const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+let curBd=null,curSvg=null,autoTimer=null,playTimer=null;
 
-function fmt(s){return s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');}
+function fmt(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/[0-9A-Za-z][0-9A-Za-z.\-]*[0-9A-Za-z]|[0-9A-Za-z]/g,m=>`<span class="${m.length<=3&&!/[.\-]/.test(m)?'tcy':'up'}">${m}</span>`)
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+}
 function classOf(s){const t=s.replace(/\*/g,'');
-  if(/^19\d\d[.\-]/.test(t))return 'line date';
-  if(/^[「【]/.test(t))return 'line quote';return 'line';}
+  if(/^19\d\d[.\-]\d/.test(t))return 'line date';
+  return 'line';}
 
-/* SVG(400x700, slice=cover)座標 → 螢幕像素 */
-function mapRect(r){const W=innerWidth,H=innerHeight,s=Math.max(W/400,H/700);
-  return{left:(W-400*s)/2+r[0]*s,top:(H-700*s)/2+r[1]*s,width:r[2]*s,height:r[3]*s};}
-function place(el,r){const m=mapRect(r);el.style.left=m.left+'px';el.style.top=m.top+'px';
-  el.style.width=m.width+'px';el.style.height=m.height+'px';}
-
-function pushLine(text,cls){
-  [...linesEl.children].forEach((el,i,a)=>{el.classList.remove('past','past2');
-    el.classList.add(i===a.length-1?'past':'past2');});
-  const p=document.createElement('div');p.className=cls||'line';p.innerHTML=fmt(text);
-  linesEl.appendChild(p);
-  requestAnimationFrame(()=>requestAnimationFrame(()=>p.classList.add('shown')));
-  while(linesEl.children.length>4)linesEl.removeChild(linesEl.firstChild);
+/* ---- 文字頁：一句一句往下（直排往左）排，排滿就翻頁 ---- */
+function overflows(el){const a=flow.getBoundingClientRect(),b=el.getBoundingClientRect();
+  return S.dir==='v' ? b.left<a.left-1 : b.bottom>a.bottom+1;}
+function addEl(el,instant){
+  flow.appendChild(el);
+  if(flow.children.length>1 && overflows(el)){
+    flow.replaceChildren(el);
+    if(!instant){flow.classList.remove('turn');void flow.offsetWidth;flow.classList.add('turn');AudioEng.page();}
+  }
+}
+function addLine(text,cls,instant){
+  [...flow.children].forEach(c=>{c.classList.add('old');c.classList.remove('in');});
+  const p=document.createElement('p');p.className=(cls||'line')+(instant?'':' in');p.innerHTML=fmt(text);
+  addEl(p,instant);return p;
+}
+function addHeading(si,instant){
+  const s=SCENES[si],h=document.createElement('h2');
+  h.className='chap'+(/^第.卷/.test(s.t)&&/\d/.test(s.t)?' vol':'');
+  h.innerHTML=fmt(s.t)+(s.pt>1&&s.p>1?`<small>之${CN[s.p]||s.p}</small>`:'');
+  flow.replaceChildren(h);
+  if(!instant){flow.classList.remove('turn');void flow.offsetWidth;flow.classList.add('turn');}
 }
 
-function buildHot(){
-  hotEl.innerHTML='';hotEl.classList.toggle('hints',showHints);
-  const bd=curBd;if(!bd)return;
-  const add=(o,cls,fn)=>{const d=document.createElement('div');
-    d.className='spot'+(cls?' '+cls:'');place(d,o.at);
-    if(done.has(bd+':'+o.id))d.classList.add('used');
-    d.innerHTML='<span class="dot"></span>';d.dataset.rect=JSON.stringify(o.at);
-    hotEl.appendChild(d);fn(d);return d;};
-
-  (PROBE[bd]||[]).forEach(o=>add(o,'',d=>{
-    d.onclick=e=>{e.stopPropagation();
-      const arr=Array.isArray(o.say)?o.say:[o.say];
-      const idx=Math.min(arr.length-1,Math.floor(si/SCENES.length*arr.length));
-      pushLine(arr[idx],'line probe');done.add(bd+':'+o.id);d.classList.add('used');
-      AudioEng.blip('probe');};}));
-
-  const t=TOGGLE[bd];
-  if(t)add(t,'',d=>{d.onclick=e=>{e.stopPropagation();
-    tog[bd]=!tog[bd];pushLine(tog[bd]?t.on:t.off,'line probe');AudioEng.blip('ok');};});
-
-  if(gateOn){const g=gateOn;
-    const tg=$('target');place(tg,g.to);tg.classList.add('on');
-    add(g,'drag',d=>{
-      let sx=0,sy=0,ox=0,oy=0,held=false;
-      d.onpointerdown=e=>{e.stopPropagation();e.preventDefault();held=true;
-        d.classList.add('held');d.setPointerCapture(e.pointerId);
-        sx=e.clientX;sy=e.clientY;ox=parseFloat(d.style.left);oy=parseFloat(d.style.top);};
-      d.onpointermove=e=>{if(!held)return;
-        d.style.left=(ox+e.clientX-sx)+'px';d.style.top=(oy+e.clientY-sy)+'px';};
-      d.onpointerup=e=>{if(!held)return;held=false;d.classList.remove('held');
-        const m=mapRect(g.to),cx=parseFloat(d.style.left)+d.offsetWidth/2,
-              cy=parseFloat(d.style.top)+d.offsetHeight/2;
-        if(cx>m.left-30&&cx<m.left+m.width+30&&cy>m.top-30&&cy<m.top+m.height+30){
-          AudioEng.blip('ok');clearGate();pushLine(g.say,'line probe');
-        }else{place(d,JSON.parse(d.dataset.rect));AudioEng.blip('probe');}};
-      d.onclick=e=>e.stopPropagation();});
-  }else $('target').classList.remove('on');
+/* ---- 場景 ---- */
+function buildSpots(svg,bd){
+  const g=document.createElementNS(NS,'g');g.setAttribute('class','spots z');g.dataset.z='.55';
+  (PROBE[bd]||[]).forEach(o=>{
+    const [x,y,w,h]=o.at,key=bd+':'+o.id;
+    const r=document.createElementNS(NS,'rect');
+    r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',w);r.setAttribute('height',h);r.setAttribute('rx',3);
+    r.setAttribute('class','spot'+(S.done.has(key)?' used':''));r.setAttribute('tabindex','0');r.setAttribute('role','button');
+    r.setAttribute('aria-label','看看這裡');r.dataset.at=o.at.join(',');
+    const d=document.createElementNS(NS,'circle');d.setAttribute('cx',x+w/2);d.setAttribute('cy',y+h/2);d.setAttribute('r',2.4);
+    d.setAttribute('class','dot');
+    const act=e=>{e.stopPropagation();touch(bd,o,r);};
+    r.addEventListener('click',act);
+    r.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act(e);}});
+    g.append(r,d);
+  });
+  svg.appendChild(g);
 }
-function clearGate(){gateOn=null;$('target').classList.remove('on');buildHot();}
-
+function touch(bd,o,r){
+  const key=bd+':'+o.id,t=TOGGLE[key];
+  if(t && S.done.has(key)){
+    S.tog[bd]=!S.tog[bd];curSvg.classList.toggle('open',S.tog[bd]);
+    addLine(S.tog[bd]?t.on:t.off,'line probe');AudioEng.blip('ok');AudioEng.window(S.tog[bd]);
+  }else{
+    const arr=Array.isArray(o.say)?o.say:[o.say];
+    addLine(arr[Math.min(arr.length-1,Math.floor(S.si/SCENES.length*arr.length))],'line probe');
+    S.done.add(key);r.classList.add('used');AudioEng.blip('probe');
+  }
+  persist();stopAuto();
+}
 function setArt(bd){
-  if(bd===curBd){buildHot();return;}
-  curBd=bd;
-  [...artEl.children].forEach(c=>{c.classList.remove('on');
-    setTimeout(()=>{if(c.parentNode&&!c.classList.contains('on'))c.remove()},1600);});
-  const d=document.createElement('div');d.className='layer';
-  d.innerHTML=ART[bd]?ART[bd]():ART.room();artEl.appendChild(d);
+  if(bd===curBd){syncScene();return;}
+  curBd=bd;document.body.dataset.bd=bd;
+  [...artEl.querySelectorAll('.layer')].forEach(c=>{c.classList.remove('on');
+    setTimeout(()=>{if(!c.classList.contains('on'))c.remove();},1700);});
+  const d=document.createElement('div');d.className='layer';d.innerHTML=(ART[bd]||ART.room)();
+  artEl.insertBefore(d,$('atmos'));
+  curSvg=d.querySelector('svg');buildSpots(curSvg,bd);
+  curSvg.classList.toggle('open',!!S.tog[bd]);
   requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.add('on')));
-  AudioEng.scene(bd);buildHot();
+  AudioEng.scene(bd);AudioEng.window(!!S.tog[bd]);Atmos.scene(bd);syncScene();
 }
-function globalIdx(){let n=0;for(let i=0;i<si;i++)n+=SCENES[i].l.length;return n+li+1;}
-function updateBar(){const g=globalIdx();
-  $('tapefill').style.width=(g/TOTAL*100).toFixed(1)+'%';
-  $('counter').textContent=String(g).padStart(3,'0')+' / '+TOTAL;
-  $('reelL').classList.toggle('spin',busy);$('reelR').classList.toggle('spin',busy);}
+/* 場景裡會隨進度改變的東西：光點開關、錄音帶放進去了沒、帶子上的標籤 */
+function syncScene(){
+  if(!curSvg)return;
+  curSvg.classList.toggle('hints',S.hints);
+  const lab=curSvg.querySelector('#tapeLabel');
+  if(lab){const m=SCENES[S.si].t.match(/\d{4}\.\d+\.\d+/);lab.textContent=m?m[0]:'';}
+  const g=GATE[S.si],live=g&&!S.gates.has(S.si);
+  curSvg.querySelectorAll('.cas').forEach(c=>{const i=+c.dataset.i;
+    const played=Object.keys(GATE).some(k=>GATE[k].cas===i&&(S.gates.has(+k)||+k<S.si)&&!(live&&g.cas===i));
+    c.classList.toggle('in',played);c.classList.toggle('live',!!live&&g.cas===i);
+    if(!(live&&g.cas===i))c.removeAttribute('data-drag');});
+  const slot=curSvg.querySelector('.slot');if(slot)slot.classList.toggle('on',!!live);
+  /* 要拖的那卷帶子上面如果蓋著「可以碰的地方」，先讓它讓開 */
+  curSvg.querySelectorAll('.spot').forEach(r=>{let hit=false;
+    if(live){const [x,y,w,h]=r.dataset.at.split(',').map(Number),cx=188+(g.cas%4)*28,cy=396+Math.floor(g.cas/4)*36;
+      hit=x<cx+24&&x+w>cx&&y<cy+30&&y+h>cy;}
+    r.classList.toggle('mute',hit);});
+  if(live)armDrag(curSvg.querySelector(`.cas[data-i="${g.cas}"]`),g);
+}
+function armDrag(el,g){
+  if(!el||el.dataset.drag)return;el.dataset.drag='1';
+  const home=el.getAttribute('transform'),[hx,hy]=home.match(/-?[\d.]+/g).map(Number);
+  let held=false,off=[0,0];
+  const pt=e=>{const p=curSvg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;
+    return p.matrixTransform(el.parentNode.getScreenCTM().inverse());};
+  el.addEventListener('pointerdown',e=>{if(!el.classList.contains('live'))return;
+    e.stopPropagation();e.preventDefault();held=true;el.classList.add('held');el.setPointerCapture(e.pointerId);
+    const p=pt(e),m=el.getAttribute('transform').match(/-?[\d.]+/g).map(Number);off=[p.x-m[0],p.y-m[1]];stopAuto();});
+  el.addEventListener('pointermove',e=>{if(!held)return;const p=pt(e);
+    el.setAttribute('transform',`translate(${p.x-off[0]} ${p.y-off[1]})`);});
+  const drop=e=>{if(!held)return;held=false;el.classList.remove('held');
+    const m=el.getAttribute('transform').match(/-?[\d.]+/g).map(Number),cx=m[0]+12,cy=m[1]+15,[x,y,w,h]=DECK_RECT;
+    el.setAttribute('transform',home);
+    if(cx>x-18&&cx<x+w+18&&cy>y-18&&cy<y+h+18){S.gates.add(S.si);AudioEng.clunk();
+      flow.querySelectorAll('[data-gate]').forEach(x=>x.remove());
+      addLine(g.say,'line probe');persist();syncScene();}
+    else AudioEng.blip('probe');};
+  el.addEventListener('pointerup',drop);el.addEventListener('pointercancel',drop);
+  el.addEventListener('click',e=>e.stopPropagation());
+}
 
-function renderScene(){
-  const s=SCENES[si];linesEl.innerHTML='';li=-1;
-  gateOn=GATE[si]||null;
+/* ---- 空氣與鏡頭 ---- */
+const Atmos=(()=>{
+  const cv=$('atmos'),c=cv.getContext('2d');let W=0,H=0,dpr=1,cfg=null,P=[],vb=150,raf=0;
+  const cam={x:0,y:0,tx:0,ty:0,last:0};
+  function size(){const r=artEl.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);
+    W=r.width;H=r.height;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);}
+  function map(x,y){const s=Math.max(W/400,H/440);return[(W-400*s)/2+x*s,(H-440*s)/2+(y-vb)*s,s];}
+  function seed(){P=[];if(!cfg)return;
+    for(let i=0;i<cfg.n;i++){const b=cfg.box||[0,0,0,0];
+      P.push({x:b[0]+Math.random()*b[2],y:b[1]+Math.random()*b[3],r:Math.random(),ph:Math.random()*6.28,
+        sp:.4+Math.random()*.8,a:Math.random()*6.28,rad:6+Math.random()*24});}}
+  function draw(t){c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);if(!cfg)return;
+    const ox=cam.x*7,oy=cam.y*4;
+    P.forEach(p=>{let x=p.x,y=p.y,rad,al;
+      if(cfg.k==='moth'){p.a+=.012*p.sp*(1+Math.sin(t*.0011+p.ph));
+        x=cfg.at[0]+Math.cos(p.a*1.7+p.ph)*p.rad;y=cfg.at[1]+Math.sin(p.a*2.3)*p.rad*.7;rad=.8;al=.55+.35*Math.sin(t*.01+p.ph);}
+      else if(cfg.k==='bokeh'){p.x+=Math.sin(t*.0002+p.ph)*.02;rad=7+p.r*13;al=.05+.05*Math.sin(t*.0007*p.sp+p.ph)+.03;}
+      else{p.y-=.018*p.sp;p.x+=Math.sin(t*.0005*p.sp+p.ph)*.03;const b=cfg.box;
+        if(p.y<b[1]){p.y=b[1]+b[3];p.x=b[0]+Math.random()*b[2];}
+        rad=(.5+p.r*.9)*(cfg.s||1);al=(.12+.38*p.r)*(.55+.45*Math.sin(t*.0012*p.sp+p.ph));}
+      const [px,py,s]=map(x,y),R=Math.max(.6,rad*s);
+      if(cfg.k==='bokeh'){const g=c.createRadialGradient(px+ox,py+oy,0,px+ox,py+oy,R);
+        g.addColorStop(0,`rgba(${cfg.c},${al})`);g.addColorStop(1,`rgba(${cfg.c},0)`);c.fillStyle=g;}
+      else c.fillStyle=`rgba(${cfg.c},${Math.max(0,al)})`;
+      c.beginPath();c.arc(px+ox,py+oy,R,0,6.283);c.fill();});}
+  function camera(t){
+    if(t-cam.last>3500){cam.tx=Math.sin(t*.00021)*.42;cam.ty=Math.cos(t*.00017)*.3;}
+    cam.x+=(cam.tx-cam.x)*.04;cam.y+=(cam.ty-cam.y)*.04;
+    artEl.querySelectorAll('.layer.on .z').forEach(g=>{const k=+g.dataset.z;
+      g.style.transform=`translate(${(cam.x*k*9).toFixed(2)}px,${(cam.y*k*5).toFixed(2)}px)`;});}
+  function loop(t){draw(t);camera(t);raf=requestAnimationFrame(loop);}
+  artEl.addEventListener('pointermove',e=>{const r=artEl.getBoundingClientRect();
+    cam.tx=((e.clientX-r.left)/r.width-.5)*-2;cam.ty=((e.clientY-r.top)/r.height-.5)*-2;cam.last=performance.now();});
+  addEventListener('resize',()=>{size();if(reduced)draw(0);});
+  document.addEventListener('visibilitychange',()=>{cancelAnimationFrame(raf);
+    if(!document.hidden&&!reduced)raf=requestAnimationFrame(loop);});
+  return{scene(bd){cfg=ATMOS[bd]||null;vb=VB[bd]||150;size();seed();if(reduced)draw(0);},
+    start(){size();if(!reduced){cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);}}};
+})();
+
+/* ---- 進度：一捲帶子，左邊愈讀愈少，右邊愈繞愈多 ---- */
+function pos(){return OFFSET[S.si]+S.li+1;}
+function updateBar(){
+  const g=pos(),f=g/TOTAL;
+  $('rL').setAttribute('r',(3.5+4.5*(1-f)).toFixed(2));$('rR').setAttribute('r',(3.5+4.5*f).toFixed(2));
+  $('ttl').textContent=SCENES[S.si].t;
+  $('cnt').textContent=`第 ${g} 句，共 ${TOTAL} 句`;
+}
+function spin(){ $('deck').classList.add('play');clearTimeout(playTimer);
+  if(!S.auto)playTimer=setTimeout(()=>$('deck').classList.remove('play'),1300); }
+
+/* ---- 往下讀 ---- */
+function enterScene(instant){
+  const s=SCENES[S.si];
   setArt(s.bd);
-  $('chLab').textContent='場 '+String(si+1).padStart(2,'0')+' / '+SCENES.length;
-  $('chTtl').textContent=s.t+(s.pt>1?'　·　'+s.p+'/'+s.pt:'');
-  step();
-  if(gateOn) pushLine('▸ '+gateOn.label+'　(或直接按下一句略過)','line gate');
+  if(S.si===0||SCENES[S.si-1].t!==s.t||instant)addHeading(S.si,instant);
+  const g=GATE[S.si];
+  if(g&&!S.gates.has(S.si)&&(!instant||S.li<0)){
+    const p=addLine(g.label+'（不拖也可以，直接讀下一句）','line gate');p.dataset.gate='1';}
 }
 function step(){
-  const s=SCENES[si];
-  if(li>=s.l.length-1){
-    if(si>=SCENES.length-1){ending();return;}
-    si++;renderScene();return;}
-  li++;pushLine(s.l[li],classOf(s.l[li]));
-  busy=true;updateBar();setTimeout(()=>{busy=false;updateBar();},700);
+  if(S.ended)return;
+  const s=SCENES[S.si];
+  if(S.li>=s.l.length-1){
+    if(S.si>=SCENES.length-1){S.ended=true;stopAuto();$('mark').classList.remove('on');
+      addLine('第三卷到這裡結束。第四卷（1993.8.14）尚未收錄。','line end');return;}
+    S.si++;S.li=-1;enterScene(false);
+  }
+  S.li++;const t=SCENES[S.si].l[S.li];
+  flow.querySelectorAll('[data-gate]').forEach(x=>{if(S.li>0)x.remove();});
+  addLine(t,classOf(t));updateBar();spin();persist();
+  if(S.auto)queueAuto(t.length);
 }
-function ending(){linesEl.innerHTML='';
-  pushLine('**第三卷結束。第四卷 1993.8.14 尚未收錄。**');
-  $('next').textContent='已 到 結 尾';$('next').disabled=true;}
+/* 跳到某個位置（續讀、目錄、改排版後重排）：把這一場已讀的句子一次排好 */
+function jump(si,li){
+  S.si=Math.max(0,Math.min(SCENES.length-1,si));S.ended=false;
+  const n=SCENES[S.si].l.length;S.li=Math.max(-1,Math.min(n-1,li));
+  flow.replaceChildren();enterScene(true);
+  for(let i=0;i<=S.li;i++){const t=SCENES[S.si].l[i];addLine(t,classOf(t),true);}
+  if(S.li<0){S.li=-1;step();}else{updateBar();persist();}
+  $('mark').classList.add('on');
+}
+function queueAuto(len){clearTimeout(autoTimer);
+  autoTimer=setTimeout(()=>{if(S.auto&&!anySheet())step();},Math.min(7500,1300+len*105));}
+function setAuto(v){S.auto=v;$('bAuto').setAttribute('aria-pressed',v);clearTimeout(autoTimer);
+  $('deck').classList.toggle('play',v);if(v)queueAuto(8);}
+function stopAuto(){if(S.auto)setAuto(false);}
+const anySheet=()=>!!document.querySelector('.sheet.on')||$('start').classList.contains('on');
 
-function buildMenu(){const seen=new Set(),box=$('chaplist');box.innerHTML='';
-  SCENES.forEach((s,i)=>{if(seen.has(s.t))return;seen.add(s.t);
-    const d=document.createElement('div');d.className='chap';
-    d.innerHTML='<span class="n">'+String(seen.size).padStart(2,'0')+
-      '</span><span class="t">'+s.t+'</span>';
-    d.onclick=()=>{si=i;$('menu').classList.remove('on');renderScene();};
-    box.appendChild(d);});}
+/* ---- 目錄、設定、回顧 ---- */
+function seg(id,cur,fn){[...$(id).children].forEach(b=>{b.setAttribute('aria-pressed',b.dataset.v===String(cur));
+  b.onclick=()=>{fn(b.dataset.v);};});}
+function applySettings(relayout){
+  document.body.classList.toggle('hz',S.dir==='h');document.body.dataset.fs=S.fs;
+  seg('segDir',S.dir,v=>{S.dir=v;applySettings(true);});
+  seg('segFs',S.fs,v=>{S.fs=v;applySettings(true);});
+  seg('segHint',S.hints?1:0,v=>{S.hints=v==='1';applySettings(false);});
+  syncScene();persist();
+  if(relayout&&curBd)jump(S.si,S.li);
+}
+function openMenu(){stopAuto();const box=$('chapList'),cur=chapOf(S.si);box.replaceChildren();
+  CHAPS.forEach((ch,k)=>{const b=document.createElement('button');
+    b.className='chapitem'+(k===cur?' cur':(k>cur?' unread':''));
+    b.innerHTML=`<span class="n">${k+1}</span><span>${ch.t.replace(/</g,'&lt;')}</span><span class="c">${ch.n} 句</span>`;
+    b.onclick=()=>{$('menu').classList.remove('on');jump(ch.first,-1);};box.appendChild(b);});
+  $('menu').classList.add('on');
+  const c=box.querySelector('.cur');if(c)c.scrollIntoView({block:'center'});}
+function openLog(){stopAuto();const box=$('logList');box.replaceChildren();
+  const end=pos(),from=Math.max(0,end-90);let n=0,last=null;
+  SCENES.forEach(s=>s.l.forEach(t=>{n++;if(n<=from||n>end)return;
+    if(s.t!==last){last=s.t;const h=document.createElement('h4');h.textContent=s.t;box.appendChild(h);}
+    const p=document.createElement('p');if(/^「/.test(t))p.className='q';
+    p.innerHTML=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');box.appendChild(p);}));
+  $('log').classList.add('on');box.scrollTop=box.scrollHeight;}
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.sheet').classList.remove('on'));
 
-$('next').onclick=e=>{e.stopPropagation();step();};
-$('btnHint').onclick=e=>{e.stopPropagation();showHints=!showHints;
-  $('btnHint').classList.toggle('act',showHints);hotEl.classList.toggle('hints',showHints);};
-$('btnMenu').onclick=e=>{e.stopPropagation();buildMenu();$('menu').classList.add('on');};
-$('btnClose').onclick=()=>$('menu').classList.remove('on');
-$('btnSound').onclick=e=>{e.stopPropagation();
-  try{const s=AudioEng.toggle(curBd||'letter');$('btnSound').classList.toggle('off',!s);}
-  catch(err){$('btnSound').classList.add('off');}};
+/* ---- 操作 ---- */
+pageEl.addEventListener('click',()=>{step();});
+$('deck').onclick=openMenu;
+$('bLog').onclick=openLog;
+$('bAuto').onclick=()=>setAuto(!S.auto);
+$('bSound').onclick=()=>{let v=false;try{v=AudioEng.set(!AudioEng.on);}catch(e){}
+  $('bSound').setAttribute('aria-pressed',v);};
 document.addEventListener('keydown',e=>{
-  if($('start').classList.contains('on')){if(e.key==='Enter'||e.key===' '){e.preventDefault();begin();}return;}
-  if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'){e.preventDefault();step();}
-  if(e.key==='Escape')$('menu').classList.remove('on');});
-addEventListener('resize',()=>{if(curBd)buildHot();});
+  if(e.target.closest&&e.target.closest('.spot'))return;
+  if($('start').classList.contains('on')){if(e.key==='Enter'||e.key===' '){e.preventDefault();begin(false);}return;}
+  if(e.key==='Escape'){document.querySelectorAll('.sheet.on').forEach(s=>s.classList.remove('on'));return;}
+  if(anySheet())return;
+  if(e.target.closest&&e.target.closest('button')&&(e.key===' '||e.key==='Enter'))return;
+  if([' ','Enter','ArrowLeft','ArrowRight','ArrowDown'].includes(e.key)){e.preventDefault();step();}
+  if(e.key==='a'||e.key==='A')setAuto(!S.auto);
+  if(e.key==='m'||e.key==='M')openMenu();
+});
+let rz=0;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(curBd&&!$('start').classList.contains('on'))jump(S.si,S.li);},200);});
 
-function begin(){$('start').classList.remove('on');
-  try{AudioEng.start(SCENES[0].bd);}catch(e){$('btnSound').classList.add('off');}
-  renderScene();}
-$('btnStart').onclick=begin;
-updateBar();
+/* ---- 開場 ---- */
+const hasProgress=Number.isInteger(saved.si)&&(saved.si>0||saved.li>0)&&saved.si<SCENES.length;
+$('startBack').innerHTML=ART.corridor();
+$('ver').textContent=VERSION;
+if(hasProgress){$('bStart').textContent='接著讀';$('bRestart').hidden=false;}
+function begin(fresh){
+  $('start').classList.remove('on');
+  if(fresh){S.done.clear();S.gates.clear();}
+  try{AudioEng.set(true);$('bSound').setAttribute('aria-pressed',true);}catch(e){}
+  Atmos.start();
+  if(hasProgress&&!fresh)jump(saved.si,saved.li);else jump(0,-1);
+}
+$('bStart').onclick=()=>begin(false);
+$('bRestart').onclick=()=>begin(true);
+applySettings(false);
 </script>
 </body>
 </html>
