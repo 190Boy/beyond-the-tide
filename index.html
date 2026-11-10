@@ -80,11 +80,34 @@ svg.open .curt{opacity:.12}
 .hints .dot{opacity:.75;animation:pulse 2.8s ease-in-out infinite}
 .hints .used + .dot{opacity:.18;animation:none}
 @keyframes pulse{0%,100%{opacity:.25}50%{opacity:.85}}
-.cas{transition:opacity .8s ease}
-#art svg .cas.live,#art svg .cas.live *{pointer-events:all}
-.cas.live{cursor:grab;filter:drop-shadow(0 0 4px rgba(217,160,91,.85))}
-.cas.live.held{cursor:grabbing}
-.cas.in{opacity:.14}
+.cas{transition:opacity .5s ease}
+.cas.in{opacity:0}
+/* ---- 機關：要讀者親手做的動作 ---- */
+#art svg .cue,#art svg .cue *{pointer-events:all}
+.cue{cursor:pointer;filter:drop-shadow(0 0 5px rgba(217,160,91,.95))}
+.cue.drag{cursor:grab} .cue.drag.held{cursor:grabbing}
+.khit{fill:transparent}
+.khit.cue,.cue>.khit{fill:rgba(217,160,91,.14);stroke:rgba(217,160,91,.85);stroke-width:1;stroke-dasharray:3 3;animation:pulse 1.6s ease-in-out infinite}
+#art svg.busy .spot{pointer-events:none}
+.busy .dot{opacity:0 !important;animation:none !important}
+#idle{position:absolute;left:0;right:0;bottom:0;height:2px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:2}
+#idle.on{opacity:.9}
+#idle i{display:block;height:100%;background:var(--sodium);transform-origin:0 50%}
+.m-card{opacity:0;transition:opacity .7s ease} svg.st-card .m-card{opacity:1}
+.m-cardin{transition:opacity .35s} svg.st-card .m-cardin{opacity:0}
+.m-card .back{display:none} svg.st-flip .m-card .back{display:inline} svg.st-flip .m-card .front{display:none}
+.flipper{transform-box:fill-box;transform-origin:center}
+.flipping .flipper{animation:flip .6s ease 1}
+@keyframes flip{0%,100%{transform:scaleX(1)}50%{transform:scaleX(0)}}
+.m-door{transform-box:fill-box;transform-origin:100% 50%;transition:transform 1.1s cubic-bezier(.3,.1,.2,1),opacity 1.1s}
+.m-door.held{transition:none}
+svg.st-lobby .m-door{transform:scaleX(.09);opacity:.55}
+.m-cas{opacity:0;transition:opacity .45s} svg.st-loaded .m-cas{opacity:1}
+.m-loose{opacity:0;transition:opacity .35s} svg.st-held .m-loose{opacity:1}
+.m-vu{transition:opacity .4s} svg:not(.st-playing) .m-vu{opacity:0}
+svg.st-playing .m-cas .reel,svg.st-playing [data-part="deck"] .reel{animation:spin 4.2s linear infinite}
+.kin{transition:transform .12s} svg.st-playing .m-play .kin{transform:translateY(4px)}
+.m-hand{opacity:0;transition:opacity .6s} svg.st-block .m-hand{opacity:1}
 /* 碰到東西時，東西自己會動一下 */
 .spot.haspart:hover{fill:transparent;stroke:none}
 .hot{filter:brightness(1.35)}
@@ -262,7 +285,7 @@ body.hz .line.in{animation-name:inkh}
 <div id="app">
   <div id="art">
     <canvas id="atmos"></canvas>
-    <div id="grain"></div><div id="vig"></div><div id="blend"></div>
+    <div id="grain"></div><div id="vig"></div><div id="blend"></div><div id="idle"><i></i></div>
   </div>
   <main id="page" aria-label="正文，點一下讀下一句">
     <div id="flow" aria-live="polite"></div>
@@ -325,7 +348,7 @@ body.hz .line.in{animation-name:inkh}
         <button class="go" id="bStart">開始閱讀</button>
         <button class="go sub" id="bRestart" hidden>從頭讀起</button>
       </div>
-      <p class="note">點文字頁，讀下一句。<br>畫面上有光點的地方可以碰，碰了會多知道一些；不碰也能讀完。<br>排版、字級、朗讀的聲音，在右下角的「目錄」裡。<br>收錄第一卷至第三卷，進度會自動記住。</p>
+      <p class="note">點文字頁，讀下一句。<br>畫面上有光點的地方可以碰，碰了會多知道一些；不碰也能讀完。<br>有些地方要你親手做：抽出房卡、推開門、放進錄音帶。三秒沒有動作，故事會自己往下走。<br>排版、字級、朗讀的聲音，在右下角的「目錄」裡。<br>收錄第一卷至第三卷，進度會自動記住。</p>
     </div>
     <h1 class="title">潮聲以外</h1>
   </div>
@@ -333,7 +356,7 @@ body.hz .line.in{animation-name:inkh}
 
 <script>
 /* 版本號：每次改檔時往上加，顯示在「目錄」最下面 */
-const VERSION = "閱讀器 v2.6（2026-11-10）";
+const VERSION = "閱讀器 v3.0（2026-11-10）";
 
 /* 正文：一整條壓縮過的 JSON。要改文字只需替換這一行。
    格式 { "t": 章節名, "bd": 場景圖, "p": 第幾段, "pt": 共幾段, "l": [句子...] } */
@@ -387,6 +410,9 @@ const DEFS = `<defs>
  <linearGradient id="drWood" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2A1C13"/><stop offset=".5" stop-color="#3D2A1D"/><stop offset="1" stop-color="#281A12"/></linearGradient>
  <linearGradient id="drBrass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D2B070"/><stop offset=".5" stop-color="#9C7A45"/><stop offset="1" stop-color="#5E4522"/></linearGradient>
  <pattern id="drWall" width="18" height="18" patternUnits="userSpaceOnUse"><rect width="18" height="18" fill="#1A1410"/><path d="M9 2 l4 7 l-4 7 l-4 -7 Z" fill="none" stroke="#221A14" stroke-width=".8"/></pattern>
+ <linearGradient id="skinG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#E3BC98"/><stop offset=".55" stop-color="#F3D8B8"/><stop offset="1" stop-color="#FBEAD2"/></linearGradient>
+ <linearGradient id="skinDim" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#B58D6C"/><stop offset=".6" stop-color="#D2AC88"/><stop offset="1" stop-color="#C39C78"/></linearGradient>
+ <linearGradient id="skinFade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C39C78"/><stop offset=".45" stop-color="#A9825F" stop-opacity=".8"/><stop offset="1" stop-color="#6E5038" stop-opacity="0"/></linearGradient>
  <filter id="soft3"><feGaussianBlur stdDeviation="3.2"/></filter>
  <filter id="soft"><feGaussianBlur stdDeviation="7"/></filter>
  <filter id="soft2"><feGaussianBlur stdDeviation="2.2"/></filter>
@@ -410,6 +436,26 @@ const SHEER = (x,y,w,h,n,sw)=>`<g class="sheer">${Array.from({length:n},(_,i)=>{
   const d=s=>`M${xl} ${y} C${xl} ${y+h*.45} ${(xl+s*a).toFixed(1)} ${y+h*.6} ${(xl+s*a*1.1).toFixed(1)} ${y+h} L${(xr+s*b*1.1).toFixed(1)} ${y+h} C${(xr+s*b).toFixed(1)} ${y+h*.6} ${xr} ${y+h*.45} ${xr} ${y} Z`;
   return `<path d="${d(sw*.3)}" fill="url(#foldG)"><animate attributeName="d" dur="${7+i*.45}s" repeatCount="indefinite" values="${d(sw*.3)};${d(sw)};${d(sw*.3)}"/></path>`}).join('')}</g>`;
 
+/* 大卷的錄音帶（錄音機特寫用），原點在左上角，252×158 */
+const BIGCAS = ()=>`<rect width="252" height="158" rx="6" fill="url(#tpCas)"/><rect x=".5" y=".5" width="251" height="157" rx="6" fill="none" stroke="#7A6A56" stroke-width=".8"/>
+ <rect x="12" y="10" width="228" height="34" rx="2" fill="#E6DBBF"/><rect x="12" y="10" width="228" height="7" fill="#8E3B32" opacity=".85"/>
+ <g stroke="#B8AA88" stroke-width=".6"><path d="M20 28 h212"/><path d="M20 36 h212"/></g>
+ <text class="tlabel" x="126" y="36" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="17" letter-spacing="3" text-anchor="middle" fill="#2E2A22"></text>
+ <rect x="36" y="56" width="180" height="72" rx="6" fill="#0D0B0A" stroke="#6A5B49" stroke-width=".8"/>
+ ${[[76,27],[176,17]].map(([cx,r])=>`<circle cx="${cx}" cy="92" r="${r}" fill="url(#tpPack)"/><circle cx="${cx}" cy="92" r="${r}" fill="none" stroke="#5A4634" stroke-width=".6"/>
+   <g class="reel"><circle cx="${cx}" cy="92" r="11" fill="#E9E1CC"/>${[0,60,120,180,240,300].map(a=>`<rect x="${cx-1.5}" y="81" width="3" height="5" fill="#1A1512" transform="rotate(${a} ${cx} 92)"/>`).join('')}
+   <circle cx="${cx}" cy="92" r="4.6" fill="#0D0B0A"/></g>`).join('')}
+ <path d="M38 58 h176 l-22 68 h-154 Z" fill="#FFF" opacity=".04"/>
+ <path d="M76 142 h100 l8 16 h-116 Z" fill="#1B1613"/><circle cx="22" cy="142" r="2.4" fill="#8A7D6C"/><circle cx="230" cy="142" r="2.4" fill="#8A7D6C"/>`;
+
+/* 女人的手：四根手指，指根在 x=287，指尖朝左 */
+const FINGERS = (fill='skinG')=>[[296,23,-5],[304.2,27,-1.5],[312.2,25.5,2],[319.8,20,5.5]].map(([c,L,r])=>{const t=288-L;return `<g transform="rotate(${r} 288 ${c})">
+   <path d="M287 ${c-2.2} L${t+4} ${c-1.6} Q${t} ${c+1.4} ${t+4} ${c+4.2} L287 ${c+4.8} Z" fill="#000" opacity=".3"/>
+   <path d="M287 ${c-3.1} L${t+4} ${c-2.5} Q${t-.6} ${c} ${t+4} ${c+2.5} L287 ${c+3.1} Z" fill="url(#${fill})"/>
+   <path d="M${t+13} ${c-2.2} q-.8 2.2 0 4.4" fill="none" stroke="#A9794F" stroke-width=".45" opacity=".55"/>
+   <path d="M${t+7.6} ${c-2} L${t+1.6} ${c-2} A2.7 2 0 0 0 ${t+1.6} ${c+2} L${t+7.6} ${c+2} Q${t+8.8} ${c} ${t+7.6} ${c-2} Z" fill="#F4D3CB" stroke="#D29E92" stroke-width=".3"/>
+   <path d="M${t+6.4} ${c-1} H${t+1.4}" fill="none" stroke="#FFF6F0" stroke-width=".5" opacity=".75" stroke-linecap="round"/></g>`}).join('');
+
 const ART = {
 
 letter:()=>SVG('letter',`
@@ -421,19 +467,25 @@ letter:()=>SVG('letter',`
    <ellipse cx="200" cy="500" rx="170" ry="26" fill="#F2C57E" opacity=".06"/>`)}
  ${Z(.55,`<g data-part="env"><g class="lift"><g transform="rotate(-4 200 400)">
    <rect x="100" y="358" width="208" height="126" fill="#000" opacity=".35" filter="url(#soft2)"/>
+   <path d="M96 352 L200 292 L304 352 Z" fill="#C6B999" stroke="#A8987A" stroke-width=".7"/>
+   <rect x="96" y="352" width="208" height="126" fill="#B3A686"/>
+   <g class="m-cardin"><rect x="134" y="318" width="132" height="84" rx="2" fill="#F0E8D4" stroke="#C4B694" stroke-width=".8"/>
+     <text x="200" y="343" font-family="serif" font-size="14" letter-spacing="3" text-anchor="middle" fill="#3B3226">海汐館</text></g>
    <rect x="96" y="352" width="208" height="126" fill="#D9CDB2"/>
-   <rect x="96" y="352" width="208" height="126" fill="none" stroke="#A8987A" stroke-width=".7"/>
-   <path d="M96 352 L200 424 L304 352" fill="none" stroke="#B5A585" stroke-width=".7"/>
+   <path d="M96 352 H304 V478 H96 Z" fill="none" stroke="#A8987A" stroke-width=".7"/>
+   <path d="M96 478 L176 414 M304 478 L224 414" fill="none" stroke="#B5A585" stroke-width=".7"/>
    <rect x="128" y="436" width="86" height="1.4" fill="#3A3427" opacity=".8"/>
    <rect x="128" y="448" width="62" height="1.4" fill="#3A3427" opacity=".65"/></g></g></g>`)}
- ${Z(.9,`<g data-part="card"><g class="lift"><g transform="rotate(7 250 300)">
+ ${Z(.9,`<g data-part="card" class="m-card"><g class="lift"><g transform="rotate(7 250 300)"><g class="flipper">
    <rect x="200" y="258" width="132" height="84" rx="2" fill="#000" opacity=".4" filter="url(#soft2)"/>
    <rect x="196" y="252" width="132" height="84" rx="2" fill="#F0E8D4"/>
    <rect x="196" y="252" width="132" height="84" rx="2" fill="none" stroke="#C4B694" stroke-width=".8"/>
-   <text x="262" y="284" font-family="serif" font-size="14" letter-spacing="3" text-anchor="middle" fill="#3B3226">海汐館</text>
-   <text x="262" y="310" font-family="serif" font-size="20" letter-spacing="5" text-anchor="middle" fill="#8E3B32">203</text>
-   <rect x="218" y="318" width="88" height=".7" fill="#C4B694"/>
-   <text x="262" y="329" font-family="serif" font-size="7" letter-spacing="2" text-anchor="middle" fill="#7A6E58">1993.8.17</text></g></g></g>`)}
+   <g class="front"><text x="262" y="288" font-family="serif" font-size="15" letter-spacing="3" text-anchor="middle" fill="#3B3226">海汐館</text>
+     <rect x="226" y="298" width="72" height=".7" fill="#C4B694"/>
+     <text x="262" y="322" font-family="serif" font-size="21" letter-spacing="5" text-anchor="middle" fill="#8E3B32">203</text></g>
+   <g class="back"><rect x="204" y="260" width="116" height="68" fill="none" stroke="#D9CDB2" stroke-width=".6"/>
+     <text x="262" y="302" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="19" letter-spacing="2" text-anchor="middle" fill="#3B3226">1993.8.17</text></g>
+   </g></g></g></g>`)}
 `),
 
 vision:()=>SVG('vision',`
@@ -581,8 +633,11 @@ lobby:()=>SVG('lobby',`
    <path d="M58 800 V190 H342 V800" fill="none" stroke="#2A3840" stroke-width="1.4"/>
    <rect x="58" y="150" width="284" height="40" fill="#0B1114"/><rect x="62" y="154" width="276" height="32" fill="#10191D" stroke="#22303A" stroke-width=".8"/>
    <text x="200" y="176" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="15" letter-spacing="12" text-anchor="middle" fill="#8A7446" opacity=".5">海汐館</text>
-   <g class="leaf"><path d="M342 192 L372 204 V800 H342 Z" fill="#9FB3B5" opacity=".07"/><path d="M342 192 L372 204 V800" fill="none" stroke="#3A4A52" stroke-width="1.6"/>
-     <path d="M350 420 v70" stroke="#8A7446" stroke-width="2.4" stroke-linecap="round"/><path d="M346 220 l20 8 l-20 120 Z" fill="#FFF" opacity=".04"/></g></g>`)}
+   <g class="m-door"><rect x="58" y="190" width="284" height="620" fill="#0A1317" opacity=".86"/>
+     <path d="M76 204 l64 0 l-64 250 Z" fill="#FFF" opacity=".06"/><path d="M176 196 l44 0 l-100 360 l-30 0 Z" fill="#FFF" opacity=".035"/>
+     <rect x="58" y="190" width="284" height="620" fill="none" stroke="#3A4A52" stroke-width="3"/>
+     <rect x="66" y="198" width="268" height="604" fill="none" stroke="#22303A" stroke-width="1"/>
+     <rect x="82" y="396" width="6" height="96" rx="3" fill="#8A7446"/><rect x="82" y="396" width="2" height="96" rx="1" fill="#D9C48A" opacity=".5"/></g></g>`)}
 `),
 
 corridor:()=>{const yl=(x,ye)=>(349+(ye-349)*(200-x)/60).toFixed(1), yr=(x,ye)=>(349+(ye-349)*(x-200)/60).toFixed(1);
@@ -856,8 +911,11 @@ room:()=>SVG('room',`
      <circle cx="160" cy="449" r="5" fill="#B4503F" opacity=".25" filter="url(#soft2)"/>
    </g>
    <rect class="slot" x="86" y="390" width="82" height="50" rx="3"/>
+   <rect class="khit m-play" x="100" y="434" width="24" height="30" rx="2"/><rect class="khit m-eject" x="144" y="434" width="24" height="30" rx="2"/>
 
    <g data-part="tapes">${[0,1,2,3,4,5,6].map(CASSETTE).join('')}</g>
+   <g class="m-hand"><g transform="translate(66 101) rotate(-40 288 308) scale(.8)">
+     <path d="M286 292 q22 -5 46 1 l0 29 q-24 6 -46 1 Z" fill="url(#skinFade)"/>${FINGERS('skinDim')}</g></g>
 
    <g data-part="glass"><ellipse cx="322" cy="463" rx="9" ry="2" fill="#000" opacity=".35"/>
      <path d="M314 436 L316 462 Q322 464.5 328 462 L330 436 Z" fill="#DCE9EA" opacity=".12"/>
@@ -877,37 +935,32 @@ tape:()=>SVG('tape',`
   <radialGradient id="tpPack"><stop offset=".3" stop-color="#2A1D14"/><stop offset=".9" stop-color="#3E2C1E"/><stop offset="1" stop-color="#1A120C"/></radialGradient>
  </defs>
  ${BG('#090A0B')}
- ${Z(.15,`<ellipse cx="200" cy="330" rx="260" ry="220" fill="#3A2A18" opacity=".5" filter="url(#soft)"/>`)}
- ${Z(.6,`
+ ${Z(.15,`<ellipse cx="200" cy="290" rx="260" ry="220" fill="#3A2A18" opacity=".5" filter="url(#soft)"/>
+   <rect x="-40" y="378" width="480" height="400" fill="#1A120C"/><rect x="-40" y="378" width="480" height="1.4" fill="#4A3626"/>`)}
+ ${Z(.6,`<g transform="translate(64 28) scale(.68)">
    <ellipse cx="200" cy="514" rx="170" ry="10" fill="#000" opacity=".6"/>
    <rect x="36" y="176" width="328" height="336" rx="10" fill="url(#tpBody)"/>
    <rect x="36.6" y="176.6" width="326.8" height="334.8" rx="10" fill="none" stroke="#6A6157" stroke-width="1"/>
    <rect x="58" y="196" width="284" height="186" rx="5" fill="#131110" stroke="#4A433B" stroke-width="1"/>
-   <rect x="74" y="210" width="252" height="158" rx="6" fill="url(#tpCas)"/><rect x="74.5" y="210.5" width="251" height="157" rx="6" fill="none" stroke="#7A6A56" stroke-width=".8"/>
-   <rect x="86" y="220" width="228" height="34" rx="2" fill="#E6DBBF"/><rect x="86" y="220" width="228" height="7" fill="#8E3B32" opacity=".85"/>
-   <g stroke="#B8AA88" stroke-width=".6">${[238,246].map(y=>`<path d="M94 ${y} h212"/>`).join('')}</g>
-   <text id="tapeLabel" x="200" y="246" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="17" letter-spacing="3" text-anchor="middle" fill="#2E2A22"></text>
-   <rect x="110" y="266" width="180" height="72" rx="6" fill="#0D0B0A" stroke="#6A5B49" stroke-width=".8"/>
-   <g data-part="reel">${[[150,27],[250,17]].map(([cx,r])=>`<circle cx="${cx}" cy="302" r="${r}" fill="url(#tpPack)"/><circle cx="${cx}" cy="302" r="${r}" fill="none" stroke="#5A4634" stroke-width=".6"/>
-     <g class="reel"><g><animateTransform attributeName="transform" type="rotate" from="0 ${cx} 302" to="360 ${cx} 302" dur="4.4s" repeatCount="indefinite"/>
-       <circle cx="${cx}" cy="302" r="11" fill="#E9E1CC"/>${[0,60,120,180,240,300].map(a=>`<rect x="${cx-1.5}" y="291" width="3" height="5" fill="#1A1512" transform="rotate(${a} ${cx} 302)"/>`).join('')}
-       <circle cx="${cx}" cy="302" r="4.6" fill="#0D0B0A"/></g></g>`).join('')}
-     <path d="M112 268 h176 l-22 68 h-154 Z" fill="#FFF" opacity=".04"/></g>
-   <path d="M150 352 h100 l8 16 h-116 Z" fill="#1B1613"/><circle cx="96" cy="352" r="2.4" fill="#8A7D6C"/><circle cx="304" cy="352" r="2.4" fill="#8A7D6C"/>
+   <g fill="#2A2622" stroke="#5A534B" stroke-width="1"><circle cx="150" cy="302" r="7"/><circle cx="250" cy="302" r="7"/></g>
+   <g class="m-cas" data-part="reel" transform="translate(74 210)">${BIGCAS()}</g>
    <path d="M58 196 h284 l-30 60 h-254 Z" fill="#FFF" opacity=".025"/>
+   <rect class="slot m-bay" x="58" y="196" width="284" height="186" rx="5"/>
 
    <g data-part="vu"><rect x="58" y="398" width="284" height="42" rx="3" fill="#151311" stroke="#4A433B" stroke-width=".8"/>
-   <g fill="#D9A05B" class="pulse">${Array.from({length:22},(_,i)=>`<rect x="${68+i*12.2}" y="412" width="6" height="14" fill="${i>17?'#B4503F':'#D9A05B'}">
+   <g class="pulse m-vu">${Array.from({length:22},(_,i)=>`<rect x="${68+i*12.2}" y="412" width="6" height="14" fill="${i>17?'#B4503F':'#D9A05B'}">
      <animate attributeName="height" dur="${.5+(i%7)*.13}s" repeatCount="indefinite" values="2;${5+(i*5)%17};2"/>
      <animate attributeName="y" dur="${.5+(i%7)*.13}s" repeatCount="indefinite" values="430;${427-(i*5)%17};430"/></rect>`).join('')}</g>
    <path d="M64 432 h272" stroke="#3A342E" stroke-width=".8"/></g>
 
-   ${[0,1,2,3,4].map(i=>{const x=62+i*50,down=i===1;return `<g transform="translate(${x} ${down?456:452})"><rect width="44" height="${down?38:42}" rx="2" fill="${i?'#3E3832':'#7A2E26'}"/>
-     <rect width="44" height="5" rx="2" fill="${i?(down?'#4E473F':'#6A6157'):'#B4503F'}"/>
-     ${['<circle cx="22" cy="24" r="5" fill="#E7C9B8"/>','<path d="M17 16 l12 7 l-12 7 Z" fill="#F2C57E"/>','<path d="M22 17 l-9 7 l9 7 Z M32 17 l-9 7 l9 7 Z" fill="#CFC4AF"/>','<path d="M12 17 l9 7 l-9 7 Z M22 17 l9 7 l-9 7 Z" fill="#CFC4AF"/>','<rect x="16" y="18" width="12" height="12" fill="#CFC4AF"/>'][i]}</g>`}).join('')}
+   ${[0,1,2,3,4].map(i=>{const x=62+i*50;return `<g transform="translate(${x} 452)" class="${i===1?'m-play':i===4?'m-eject':''}"><g class="kin"><rect width="44" height="42" rx="2" fill="${i?'#3E3832':'#7A2E26'}"/>
+     <rect width="44" height="5" rx="2" fill="${i?'#6A6157':'#B4503F'}"/>
+     ${['<circle cx="22" cy="24" r="5" fill="#E7C9B8"/>','<path d="M17 16 l12 7 l-12 7 Z" fill="#F2C57E"/>','<path d="M22 17 l-9 7 l9 7 Z M32 17 l-9 7 l9 7 Z" fill="#CFC4AF"/>','<path d="M12 17 l9 7 l-9 7 Z M22 17 l9 7 l-9 7 Z" fill="#CFC4AF"/>','<rect x="16" y="18" width="12" height="12" fill="#CFC4AF"/>'][i]}</g>
+     <rect class="khit" x="-3" y="-8" width="50" height="58" rx="3"/></g>`}).join('')}
    <circle cx="330" cy="474" r="3" fill="#B4503F"><animate attributeName="opacity" dur="2.2s" repeatCount="indefinite" values=".3;1;.3"/></circle>
    <circle cx="330" cy="474" r="9" fill="#B4503F" opacity=".25" filter="url(#soft2)"/>
- `)}
+ </g>`)}
+ ${Z(.85,`<g class="m-loose" transform="translate(152 382)"><ellipse cx="48" cy="61" rx="52" ry="4" fill="#000" opacity=".5"/><g transform="scale(.38)">${BIGCAS()}</g></g>`)}
  <rect x="-40" y="-40" width="480" height="800" fill="#000" opacity=".14"/>
 `),
 
@@ -988,7 +1041,7 @@ dark:()=>SVG('dark',`
 /* 碰了會多知道一些。say 是陣列時，依閱讀進度挑一句，愈後面愈不一樣。 */
 const PROBE = {
  letter:[
-  {id:'card',at:[196,252,132,84],say:['你又看了一次那張房卡。海汐館 203，1993.8.17。','紙很新。一點都不像三十三年前的東西。']},
+  {id:'card',need:'card',at:[196,252,132,84],say:['你又看了一次那張房卡。海汐館 203，1993.8.17。','紙很新。一點都不像三十三年前的東西。']},
   {id:'env',at:[96,362,208,116],say:['米白色的信封。沒有寄件地址。','鋼筆字。字跡很好看，卻有一種奇怪的老派感。']}],
  vision:[{id:'fig',at:[168,400,64,140],say:['你看不清她的臉。','你想再看清楚一點，畫面就消失了。']}],
  street:[
@@ -1014,8 +1067,8 @@ const PROBE = {
   {id:'phone',at:[146,246,38,62],say:['牆上還掛著有線電話。線沒有拔。']},
   {id:'mag',at:[18,444,70,24],say:['床頭放著一本已經泛黃的旅遊雜誌。日期是 1993 年。']}],
  tape:[
-  {id:'reel',at:[100,264,200,96],say:['磁帶還在轉。','塑膠殼已經有些泛黃。']},
-  {id:'vu',at:[62,432,276,30],say:['音量條隨著聲音跳動。那是你自己的聲音。']}],
+  {id:'reel',at:[132,207,136,65],say:['磁帶還在轉。','塑膠殼已經有些泛黃。']},
+  {id:'vu',at:[106,320,188,22],say:['音量條隨著聲音跳動。那是你自己的聲音。']}],
  market:[{id:'crowd',at:[0,380,200,90],say:['夜市的聲音從錄音裡傳出來。有人叫賣，有人笑。','1993 年的夏夜。兩個二十歲左右的年輕人坐在路邊。']}],
  dark:[{id:'reel',at:[124,264,152,152],say:['磁帶仍然轉著。','這一次沒有任何背景聲音。只有呼吸。']}]
 };
@@ -1026,13 +1079,35 @@ const TOGGLE = {
  'room:win':{on:'你把窗推開一點。外面聽得見海。',off:'你把窗關上。房間裡只剩磁帶轉動的聲音。'}
 };
 
-/* 儀式動作：把錄音帶拖進機器。key = 場景 index，cas = 第幾卷（0 起算） */
-const GATE = {
- 19:{cas:0,label:'把第一卷拖進錄音機',say:'你把標著 8月11日 的錄音帶放進機器，按下播放。'},
- 31:{cas:1,label:'換上第二卷',say:'你把第一卷退出來，換上第二卷。'},
- 53:{cas:2,label:'放進第三卷',say:'你把第三卷放進錄音機。按下播放。'}
-};
-const DECK_RECT = [38,388,132,76];
+/* 機關：讀到某一句之前，故事先停下來，等讀者親手做那個動作。
+   at = [場景 index, 第幾句]（那一句就是「你做了這件事」的句子）
+   steps：依序要做的動作。tap = 點一下；drag = 拖（to = 拖到哪個元素上；dy/dx = 往那個方向拖多遠）
+          set = 做完之後場景狀態怎麼變；fx = 動作當下加在元素上的動畫；snd = 聲音
+   IDLE_MS 內螢幕沒有任何動作，就自動做完、往下走；直接點文字頁也一樣。 */
+const IDLE_MS = 3000;
+const MECH = [
+ {at:[0,3],  say:'把房卡從信封裡抽出來', steps:[{drag:'.m-cardin',dy:-46,lock:'y',set:{card:1},snd:'page'}]},
+ {at:[0,7],  say:'把房卡翻到背面',       steps:[{tap:'.m-card',fx:'flipping',delay:300,set:{flip:1},snd:'page'}]},
+ {at:[3,2],  say:'推開門',               steps:[{drag:'.m-door',dx:46,swing:true,set:{lobby:1},snd:'blip'}]},
+ {at:[5,0],  say:'伸手去碰門把',         steps:[{tap:'[data-part="knob"]',fx:'hit',snd:'blip'}]},
+ {at:[18,7], say:'拿起 8月11日 那一卷',  steps:[{tap:'.cas[data-i="0"]',set:{held:1},snd:'blip'}]},
+ {at:[20,0], say:'把錄音帶放進機器',     steps:[{drag:'.m-loose',to:'.m-bay',set:{loaded:1,held:0},snd:'clunk'}]},
+ {at:[20,1], say:'按下播放',             steps:[{tap:'.m-play',set:{playing:1},snd:'clunk'}]},
+ {at:[32,3], say:'退出第一卷，換上第二卷，按下播放', steps:[
+    {tap:'.m-eject',set:{loaded:0},snd:'clunk'},
+    {drag:'.m-loose',to:'.m-bay',set:{loaded:2,held:0},snd:'clunk'},
+    {tap:'.m-play',set:{playing:1},snd:'clunk'}]},
+ {at:[48,8], say:'伸手去拿第三卷',       steps:[{tap:'.cas[data-i="2"]',set:{block:1},snd:'blip'}]},
+ {at:[53,4], say:'把第三卷放進錄音機',   steps:[{drag:'.cas[data-i="2"]',to:'.slot',set:{loaded:3,block:0},snd:'clunk'}]},
+ {at:[53,5], say:'按下播放',             steps:[{tap:'.m-play',set:{playing:1},snd:'clunk'}]},
+ {at:[72,1], say:'按停止鍵，把第三卷退出來', steps:[{tap:'.m-eject',set:{loaded:0,playing:0},snd:'clunk'}]}
+];
+/* 不需要讀者動手、但場景狀態會跟著變的地方 */
+const EVENTS = [
+ {at:[29,0],set:{playing:0}},   // 磁帶停止轉動
+ {at:[32,0],set:{held:2}},      // 你拿起第二卷錄音帶
+ {at:[46,1],set:{playing:0}}    // 第二卷磁帶停了
+];
 
 /* 空氣裡的東西（畫在 canvas 上）：dust 塵、moth 繞著燈的蛾、bokeh 失焦的燈 */
 const ATMOS = {
@@ -1163,11 +1238,11 @@ const Store={
   save(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){}}
 };
 const saved=Store.load();
-const S={ si:0, li:-1, done:new Set(saved.done||[]), gates:new Set(saved.gates||[]), tog:{},
+const S={ si:0, li:-1, done:new Set(saved.done||[]), tog:{},
   voice:saved.voice||null,
   dir:saved.dir==='h'?'h':'v', fs:['s','m','l'].includes(saved.fs)?saved.fs:'m', hints:saved.hints!==false,
   auto:false, ended:false };
-function persist(){Store.save({si:S.si,li:S.li,done:[...S.done],gates:[...S.gates],dir:S.dir,fs:S.fs,hints:S.hints,voice:S.voice});}
+function persist(){Store.save({si:S.si,li:S.li,done:[...S.done],dir:S.dir,fs:S.fs,hints:S.hints,voice:S.voice});}
 
 /* ================= 畫面 ================= */
 const $=id=>document.getElementById(id);
@@ -1216,7 +1291,7 @@ function buildSpots(svg,bd){
     const r=document.createElementNS(NS,'rect');
     r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',w);r.setAttribute('height',h);r.setAttribute('rx',3);
     r.setAttribute('class','spot'+(S.done.has(key)?' used':''));r.setAttribute('tabindex','0');r.setAttribute('role','button');
-    r.setAttribute('aria-label','看看這裡');r.dataset.at=o.at.join(',');
+    r.setAttribute('aria-label','看看這裡');r.dataset.at=o.at.join(',');if(o.need)r.dataset.need=o.need;
     const d=document.createElementNS(NS,'circle');d.setAttribute('cx',x+w/2);d.setAttribute('cy',y+h/2);d.setAttribute('r',2.4);
     d.setAttribute('class','dot');
     const act=e=>{e.stopPropagation();touch(bd,o,r);};
@@ -1256,45 +1331,84 @@ function setArt(bd){
   requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.add('on')));
   AudioEng.scene(bd);AudioEng.window(!!S.tog[bd]);Atmos.scene(bd);syncScene();
 }
-/* 場景裡會隨進度改變的東西：光點開關、錄音帶放進去了沒、帶子上的標籤 */
-function syncScene(){
-  if(!curSvg)return;
-  curSvg.classList.toggle('hints',S.hints);
-  const lab=curSvg.querySelector('#tapeLabel');
-  if(lab){const m=SCENES[S.si].t.match(/\d{4}\.\d+\.\d+/);lab.textContent=m?m[0]:'';}
-  const g=GATE[S.si],live=g&&!S.gates.has(S.si);
-  curSvg.querySelectorAll('.cas').forEach(c=>{const i=+c.dataset.i;
-    const played=Object.keys(GATE).some(k=>GATE[k].cas===i&&(S.gates.has(+k)||+k<S.si)&&!(live&&g.cas===i));
-    c.classList.toggle('in',played);c.classList.toggle('live',!!live&&g.cas===i);
-    if(!(live&&g.cas===i))c.removeAttribute('data-drag');});
-  const slot=curSvg.querySelector('.slot');if(slot)slot.classList.toggle('on',!!live);
-  /* 要拖的那卷帶子上面如果蓋著「可以碰的地方」，先讓它讓開 */
-  curSvg.querySelectorAll('.spot').forEach(r=>{let hit=false;
-    if(live){const [x,y,w,h]=r.dataset.at.split(',').map(Number),cx=188+(g.cas%4)*28,cy=396+Math.floor(g.cas/4)*36;
-      hit=x<cx+24&&x+w>cx&&y<cy+30&&y+h>cy;}
-    r.classList.toggle('mute',hit);});
-  if(live)armDrag(curSvg.querySelector(`.cas[data-i="${g.cas}"]`),g);
+/* ---- 場景狀態：由「讀到哪裡」推算出來，所以跳章節、重新整理都會是對的 ---- */
+const G=(si,li)=>OFFSET[si]+li+1;
+const MECH_AT={};MECH.forEach(m=>MECH_AT[m.at.join('.')]=m);
+const TIMELINE=[...MECH.map(m=>({g:G(...m.at),set:Object.assign({},...m.steps.map(x=>x.set||{}))})),
+  ...EVENTS.map(e=>({g:G(...e.at),set:e.set}))].sort((a,b)=>a.g-b.g);
+function stateNow(){
+  const g=pos(),st={card:0,flip:0,lobby:0,held:0,loaded:0,playing:0,block:0};
+  TIMELINE.forEach(e=>{if(e.g<=g)Object.assign(st,e.set);});
+  if(Mech.cur)Mech.cur.steps.slice(0,Mech.i).forEach(x=>Object.assign(st,x.set||{}));
+  return st;
 }
-function armDrag(el,g){
-  if(!el||el.dataset.drag)return;el.dataset.drag='1';
-  const home=el.getAttribute('transform'),[hx,hy]=home.match(/-?[\d.]+/g).map(Number);
-  let held=false,off=[0,0];
-  const pt=e=>{const p=curSvg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;
-    return p.matrixTransform(el.parentNode.getScreenCTM().inverse());};
-  el.addEventListener('pointerdown',e=>{if(!el.classList.contains('live'))return;
-    e.stopPropagation();e.preventDefault();held=true;el.classList.add('held');el.setPointerCapture(e.pointerId);
-    const p=pt(e),m=el.getAttribute('transform').match(/-?[\d.]+/g).map(Number);off=[p.x-m[0],p.y-m[1]];stopAuto();});
-  el.addEventListener('pointermove',e=>{if(!held)return;const p=pt(e);
-    el.setAttribute('transform',`translate(${p.x-off[0]} ${p.y-off[1]})`);});
-  const drop=e=>{if(!held)return;held=false;el.classList.remove('held');
-    const m=el.getAttribute('transform').match(/-?[\d.]+/g).map(Number),cx=m[0]+12,cy=m[1]+15,[x,y,w,h]=DECK_RECT;
-    el.setAttribute('transform',home);
-    if(cx>x-18&&cx<x+w+18&&cy>y-18&&cy<y+h+18){S.gates.add(S.si);AudioEng.clunk();
-      flow.querySelectorAll('[data-gate]').forEach(x=>x.remove());
-      addLine(g.say,'line probe');persist();syncScene();}
-    else AudioEng.blip('probe');};
-  el.addEventListener('pointerup',drop);el.addEventListener('pointercancel',drop);
-  el.addEventListener('click',e=>e.stopPropagation());
+function syncScene(){
+  if(!curSvg)return;const st=stateNow();
+  curSvg.classList.toggle('hints',S.hints);
+  ['card','flip','lobby','playing','block','loaded','held'].forEach(k=>curSvg.classList.toggle('st-'+k,!!st[k]));
+  curSvg.classList.toggle('busy',!!Mech.cur);
+  curSvg.querySelectorAll('.m-cas .tlabel').forEach(t=>t.textContent=st.loaded?`1993.8.${10+st.loaded}`:'');
+  curSvg.querySelectorAll('.m-loose .tlabel').forEach(t=>t.textContent=st.held?`1993.8.${10+st.held}`:'');
+  curSvg.querySelectorAll('.cas').forEach(c=>{const k=+c.dataset.i+1;c.classList.toggle('in',st.loaded===k||st.held===k);});
+  curSvg.querySelectorAll('.spot').forEach(r=>{const hide=r.dataset.need&&!st[r.dataset.need];
+    r.style.display=hide?'none':'';if(r.nextSibling)r.nextSibling.style.display=hide?'none':'';});
+}
+
+/* ---- 機關 ---- */
+const Mech={cur:null,i:0,done:null,timer:0,off:null,last:0,
+  start(m,done){this.cur=m;this.i=0;this.done=done;
+    const p=addLine(m.say,'line gate');p.dataset.gate='1';$('idle').classList.add('on');this.arm();},
+  arm(){this.disarm();syncScene();
+    const st=this.cur.steps[this.i],el=curSvg&&curSvg.querySelector(st.tap||st.drag);
+    if(!el){this.advance();return;}
+    const tgt=st.to?curSvg.querySelector(st.to):null;
+    el.classList.add('cue');if(st.drag)el.classList.add('drag');if(tgt)tgt.classList.add('on');
+    const ok=()=>this.act(el,st);
+    const un=st.tap?onTap(el,ok):onDrag(el,st,tgt,ok);
+    this.off=()=>{un();el.classList.remove('cue','drag','held');if(tgt)tgt.classList.remove('on');};
+    this.kick(true);},
+  disarm(){if(this.off){this.off();this.off=null;}clearTimeout(this.timer);},
+  /* 讀者做完了這一步 */
+  act(el,st){this.disarm();
+    if(st.fx){el.classList.remove(st.fx);void el.getBoundingClientRect();el.classList.add(st.fx);setTimeout(()=>el.classList.remove(st.fx),900);}
+    if(st.snd==='clunk')AudioEng.clunk();else if(st.snd==='page')AudioEng.page();else if(st.snd)AudioEng.blip('ok');
+    setTimeout(()=>{if(this.cur)this.advance();},st.delay||0);},
+  advance(){this.i++;if(this.i<this.cur.steps.length){this.arm();return;}this.finish();},
+  /* 做完（或時間到、或讀者直接點文字頁）：把剩下的步驟一次做完，往下讀 */
+  finish(){if(!this.cur)return;this.disarm();const d=this.done;this.clear();d();},
+  clear(){this.disarm();this.cur=null;this.done=null;$('idle').classList.remove('on');
+    flow.querySelectorAll('[data-gate]').forEach(x=>x.remove());if(curSvg)curSvg.classList.remove('busy');},
+  /* 螢幕上有任何動作，就重新倒數 */
+  kick(force){if(!this.cur)return;const now=performance.now();if(!force&&now-this.last<160)return;this.last=now;
+    clearTimeout(this.timer);const bar=$('idle').firstChild;
+    bar.style.transition='none';bar.style.transform='scaleX(1)';void bar.offsetWidth;
+    bar.style.transition=`transform ${IDLE_MS}ms linear`;bar.style.transform='scaleX(0)';
+    this.timer=setTimeout(()=>{if(anySheet()){this.kick(true);return;}this.finish();},IDLE_MS);}
+};
+['pointerdown','pointermove','keydown'].forEach(ev=>document.addEventListener(ev,()=>Mech.kick(),true));
+
+function onTap(el,fn){const h=e=>{e.stopPropagation();e.preventDefault();fn();};
+  el.addEventListener('click',h);return()=>el.removeEventListener('click',h);}
+/* 拖：元素跟著手指走；放開時如果到了目標（或拖得夠遠）就算完成，否則彈回原位 */
+function onDrag(el,st,tgt,fn){
+  const home=el.getAttribute('transform')||'';let held=false,p0=null,d=[0,0];
+  const pt=e=>{const p=curSvg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(el.parentNode.getScreenCTM().inverse());};
+  const far=()=>(st.dy<0&&d[1]<=st.dy)||(st.dy>0&&d[1]>=st.dy)||(st.dx&&Math.abs(d[0])>=st.dx);
+  const hit=()=>{if(!tgt)return far();const a=el.getBoundingClientRect(),b=tgt.getBoundingClientRect(),
+    cx=a.left+a.width/2,cy=a.top+a.height/2,m=18;return cx>b.left-m&&cx<b.right+m&&cy>b.top-m&&cy<b.bottom+m;};
+  const reset=()=>{if(home)el.setAttribute('transform',home);else el.removeAttribute('transform');el.style.transform='';};
+  const down=e=>{e.stopPropagation();e.preventDefault();held=true;p0=pt(e);d=[0,0];el.classList.add('held');
+    try{el.setPointerCapture(e.pointerId);}catch(x){}stopAuto();};
+  const move=e=>{if(!held)return;const p=pt(e);d=[p.x-p0.x,p.y-p0.y];
+    if(st.lock==='y')d=[0,Math.min(0,d[1])];
+    if(st.swing){el.style.transform=`scaleX(${Math.max(.09,1-Math.abs(d[0])/st.dx*.5).toFixed(3)})`;return;}
+    el.setAttribute('transform',`translate(${d[0].toFixed(1)} ${d[1].toFixed(1)}) ${home}`);};
+  const up=()=>{if(!held)return;held=false;el.classList.remove('held');const ok=hit();reset();if(ok)fn();};
+  const click=e=>e.stopPropagation();
+  el.addEventListener('pointerdown',down);el.addEventListener('pointermove',move);
+  el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);el.addEventListener('click',click);
+  return()=>{reset();el.removeEventListener('pointerdown',down);el.removeEventListener('pointermove',move);
+    el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);el.removeEventListener('click',click);};
 }
 
 /* ---- 空氣與鏡頭 ---- */
@@ -1353,31 +1467,35 @@ function enterScene(instant){
   const s=SCENES[S.si];
   setArt(s.bd);
   if(S.si===0||SCENES[S.si-1].t!==s.t||instant)addHeading(S.si,instant);
-  const g=GATE[S.si];
-  if(g&&!S.gates.has(S.si)&&(!instant||S.li<0)){
-    const p=addLine(g.label+'（不拖也可以，直接讀下一句）','line gate');p.dataset.gate='1';}
 }
 function step(){
   if(S.ended)return;
+  if(Mech.cur){Mech.finish();return;}          // 機關進行中點文字頁：直接往下
   const s=SCENES[S.si];
   if(S.li>=s.l.length-1){
     if(S.si>=SCENES.length-1){S.ended=true;stopAuto();$('mark').classList.remove('on');
       addLine('第三卷到這裡結束。第四卷（1993.8.14）尚未收錄。','line end');return;}
     S.si++;S.li=-1;enterScene(false);
   }
+  const m=MECH_AT[S.si+'.'+(S.li+1)];
+  if(m){clearTimeout(autoTimer);Mech.start(m,reveal);return;}
+  reveal();
+}
+function reveal(){
   S.li++;const t=SCENES[S.si].l[S.li];
-  flow.querySelectorAll('[data-gate]').forEach(x=>{if(S.li>0)x.remove();});
-  addLine(t,classOf(t));updateBar();spin();persist();
+  addLine(t,classOf(t));updateBar();spin();persist();syncScene();
   const spoken=Voice.say(t,()=>{if(S.auto&&!anySheet()){clearTimeout(autoTimer);autoTimer=setTimeout(step,420);}});
   if(S.auto&&!spoken)queueAuto(t.length);
 }
 /* 跳到某個位置（續讀、目錄、改排版後重排）：把這一場已讀的句子一次排好 */
 function jump(si,li){
+  Mech.clear();
   S.si=Math.max(0,Math.min(SCENES.length-1,si));S.ended=false;
   const n=SCENES[S.si].l.length;S.li=Math.max(-1,Math.min(n-1,li));
   flow.replaceChildren();enterScene(true);
   for(let i=0;i<=S.li;i++){const t=SCENES[S.si].l[i];addLine(t,classOf(t),true);}
-  if(S.li<0){S.li=-1;step();}else{updateBar();persist();}
+  updateBar();
+  if(S.li<0){S.li=-1;step();}else{persist();syncScene();}
   $('mark').classList.add('on');
 }
 function queueAuto(len){clearTimeout(autoTimer);
@@ -1452,7 +1570,7 @@ $('ver').textContent=VERSION;
 if(hasProgress){$('bStart').textContent='接著讀';$('bRestart').hidden=false;}
 function begin(fresh){
   $('start').classList.remove('on');
-  if(fresh){S.done.clear();S.gates.clear();}
+  if(fresh){S.done.clear();}
   try{AudioEng.set(true);$('bSound').setAttribute('aria-pressed',true);}catch(e){}
   Atmos.start();
   if(hasProgress&&!fresh)jump(saved.si,saved.li);else jump(0,-1);
