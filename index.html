@@ -327,7 +327,7 @@ body.hz .line.in{animation-name:inkh}
 
 <script>
 /* 版本號：每次改檔時往上加，顯示在「目錄」最下面 */
-const VERSION = "閱讀器 v2.2（2026-11-10）";
+const VERSION = "閱讀器 v2.3（2026-11-10）";
 
 /* 正文：一整條壓縮過的 JSON。要改文字只需替換這一行。
    格式 { "t": 章節名, "bd": 場景圖, "p": 第幾段, "pt": 共幾段, "l": [句子...] } */
@@ -666,7 +666,7 @@ door:()=>SVG('door',`
 door2:()=>SVG('door2',`
  <defs>
   <linearGradient id="d2In" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFF1CF"/><stop offset="1" stop-color="#E7B877"/></linearGradient>
-  <linearGradient id="d2Skin" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#B98A62"/><stop offset=".6" stop-color="#EBCBA4"/><stop offset="1" stop-color="#F7E0BF"/></linearGradient>
+  <linearGradient id="d2Skin" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#E3BC98"/><stop offset=".55" stop-color="#F3D8B8"/><stop offset="1" stop-color="#FBEAD2"/></linearGradient>
  </defs>
  <rect x="-40" y="-40" width="480" height="800" fill="url(#drWall)"/>
  ${Z(.2,`<rect x="28" y="34" width="344" height="640" fill="#170F0A"/>
@@ -687,10 +687,13 @@ door2:()=>SVG('door2',`
    <rect x="280" y="52" width="7" height="620" fill="#7A583A"/><rect x="286" y="52" width="1.4" height="620" fill="#F7D9A4" opacity=".8"/>
    <path d="M46 52 H280 V672" fill="none" stroke="#F0C888" stroke-width=".8" opacity=".25"/>`)}
  ${Z(.7,`<g data-part="hand"><g class="grip">
-   ${[0,1,2,3].map(i=>`<rect x="${264+(i===0?3:i===3?4:0)}" y="${289+i*10.5}" width="${27-(i===0?3:i===3?4:0)}" height="9" rx="4.5" fill="url(#d2Skin)"/>
-     <path d="M${272} ${297.6+i*10.5} h16" stroke="#8A6242" stroke-width=".6" opacity=".6"/>
-     <rect x="${266+(i===0?3:i===3?4:0)}" y="${290.4+i*10.5}" width="6" height="5" rx="2.4" fill="#F7E6CF" opacity=".55"/>`).join('')}
-   <path d="M291 290 q6 20 0 42" fill="none" stroke="#5E3F28" stroke-width="1.2" opacity=".5"/></g></g>`)}
+   ${[[296,23,-5],[304.2,27,-1.5],[312.2,25.5,2],[319.8,20,5.5]].map(([c,L,r])=>{const t=288-L;return `<g transform="rotate(${r} 288 ${c})">
+     <path d="M287 ${c-2.2} L${t+4} ${c-1.6} Q${t} ${c+1.4} ${t+4} ${c+4.2} L287 ${c+4.8} Z" fill="#000" opacity=".3"/>
+     <path d="M287 ${c-3.1} L${t+4} ${c-2.5} Q${t-.6} ${c} ${t+4} ${c+2.5} L287 ${c+3.1} Z" fill="url(#d2Skin)"/>
+     <path d="M${t+13} ${c-2.2} q-.8 2.2 0 4.4" fill="none" stroke="#A9794F" stroke-width=".45" opacity=".55"/>
+     <path d="M${t+7.6} ${c-2} Q${t-4.4} ${c} ${t+7.6} ${c+2} Q${t+9} ${c} ${t+7.6} ${c-2} Z" fill="#F4D3CB" stroke="#D29E92" stroke-width=".3"/>
+     <path d="M${t+6.4} ${c-.8} Q${t+3.4} ${c-.9} ${t+1.2} ${c-.4}" fill="none" stroke="#FFF6F0" stroke-width=".5" opacity=".75" stroke-linecap="round"/></g>`}).join('')}
+   </g></g>`)}
  <rect x="-40" y="-40" width="480" height="800" fill="#000" opacity=".16"/>
 `),
 
