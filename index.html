@@ -327,7 +327,7 @@ body.hz .line.in{animation-name:inkh}
 
 <script>
 /* 版本號：每次改檔時往上加，顯示在「目錄」最下面 */
-const VERSION = "閱讀器 v2.3（2026-11-10）";
+const VERSION = "閱讀器 v2.4（2026-11-10）";
 
 /* 正文：一整條壓縮過的 JSON。要改文字只需替換這一行。
    格式 { "t": 章節名, "bd": 場景圖, "p": 第幾段, "pt": 共幾段, "l": [句子...] } */
@@ -691,8 +691,8 @@ door2:()=>SVG('door2',`
      <path d="M287 ${c-2.2} L${t+4} ${c-1.6} Q${t} ${c+1.4} ${t+4} ${c+4.2} L287 ${c+4.8} Z" fill="#000" opacity=".3"/>
      <path d="M287 ${c-3.1} L${t+4} ${c-2.5} Q${t-.6} ${c} ${t+4} ${c+2.5} L287 ${c+3.1} Z" fill="url(#d2Skin)"/>
      <path d="M${t+13} ${c-2.2} q-.8 2.2 0 4.4" fill="none" stroke="#A9794F" stroke-width=".45" opacity=".55"/>
-     <path d="M${t+7.6} ${c-2} Q${t-4.4} ${c} ${t+7.6} ${c+2} Q${t+9} ${c} ${t+7.6} ${c-2} Z" fill="#F4D3CB" stroke="#D29E92" stroke-width=".3"/>
-     <path d="M${t+6.4} ${c-.8} Q${t+3.4} ${c-.9} ${t+1.2} ${c-.4}" fill="none" stroke="#FFF6F0" stroke-width=".5" opacity=".75" stroke-linecap="round"/></g>`}).join('')}
+     <path d="M${t+7.6} ${c-2} L${t+1.6} ${c-2} A2.7 2 0 0 0 ${t+1.6} ${c+2} L${t+7.6} ${c+2} Q${t+8.8} ${c} ${t+7.6} ${c-2} Z" fill="#F4D3CB" stroke="#D29E92" stroke-width=".3"/>
+     <path d="M${t+6.4} ${c-1} H${t+1.4}" fill="none" stroke="#FFF6F0" stroke-width=".5" opacity=".75" stroke-linecap="round"/></g>`}).join('')}
    </g></g>`)}
  <rect x="-40" y="-40" width="480" height="800" fill="#000" opacity=".16"/>
 `),
