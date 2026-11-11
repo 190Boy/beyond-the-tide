@@ -182,6 +182,8 @@ svg.st-ph1 .m-phone{animation:buzz .3s linear infinite}
 .slot{fill:rgba(217,160,91,.06);stroke:rgba(217,160,91,.6);stroke-width:.8;stroke-dasharray:3 3;
   opacity:0;pointer-events:none}
 .slot.on{opacity:1;animation:pulse 1.8s ease-in-out infinite}
+/* 新增（插圖重繪）：錄音機播放中時，PLAY 鍵的鍵帽往下沉一點。只影響 DECK() 裡 class="kplay" 的那顆鍵帽 */
+.kplay{transition:transform .12s} svg.st-playing .kplay{transform:translateY(1.6px)}
 
 /* ---- 文字頁 ---- */
 #flow{width:100%;flex:1 1 auto;min-height:0;overflow:hidden;writing-mode:vertical-rl;-webkit-writing-mode:vertical-rl;
@@ -399,7 +401,7 @@ const chapOf = si => { let c=0; CHAPS.forEach((ch,k)=>{ if(ch.first<=si) c=k; })
 /* ================= 場景圖 =================
    座標沿用 400 寬的畫布；每張圖用 VB 指定看的是哪一段高度（視窗 400×440）。
    Z(深度, 內容)：深度愈大，鏡頭移動時位移愈多（0 = 不動的遠景）。 */
-const VB = {train:150,dusk:170,icefruit:150,store:150,harbor:150,dining:98,photo:150,rain:110,letter:150,vision:150,street:170,lobby:150,corridor:170,door:240,door2:150,room:98,tape:110,market:150,dark:150};
+const VB = {train:150,dusk:170,icefruit:150,store:150,harbor:150,dining:98,photo:150,rain:110,letter:150,vision:150,street:170,lobby:128,corridor:170,door:240,door2:150,room:98,tape:110,market:150,dark:150};
 const Z = (k,s)=>`<g class="z" data-z="${k}">${s}</g>`;
 const BG = (fill,more='')=>`<rect x="-40" y="-40" width="480" height="800" fill="${fill}" ${more}/>`;
 const SVG = (bd,inner)=>`<svg viewBox="0 ${VB[bd]} 400 440" preserveAspectRatio="xMidYMid slice">${DEFS}${inner}</svg>`;
@@ -419,6 +421,22 @@ const CURTAIN = (x,y,w,h,o)=>`
            M${x+w} ${y} L${x+w} ${y+h} L${x+w*.74} ${y+h} Q${x+w*.86} ${y+h*.5} ${x+w*.8} ${y} Z"/>
  </path>
 </g>`;
+
+/* 畫圖用的小工具：RNG = 固定種子的亂數（每次畫出來都一樣）；GRAIN / GRAINV = 橫向／直向的木紋細線 */
+const RNG = s=>()=>(s=(s*16807)%2147483647,(s-1)/2147483646);
+const GRAIN = (x,y,w,h,n,seed,col,op=.5,sw=.6)=>{const r=RNG(seed);let s='';for(let i=0;i<n;i++){
+  const yy=y+h*(i+.5)/n+(r()-.5)*h/n*.8,x0=x+r()*w*.35,len=w*(.3+r()*.65),a=(r()-.5)*2.6;
+  s+=`<path d="M${x0.toFixed(1)} ${yy.toFixed(1)} q${(len/4).toFixed(1)} ${a.toFixed(1)} ${(len/2).toFixed(1)} 0 t${(len/2).toFixed(1)} 0"/>`;}
+  return `<g fill="none" stroke="${col}" stroke-width="${sw}" opacity="${op}" stroke-linecap="round">${s}</g>`;};
+const GRAINV = (x,y,w,h,n,seed,col,op=.5,sw=.6)=>{const r=RNG(seed);let s='';for(let i=0;i<n;i++){
+  const xx=x+w*(i+.5)/n+(r()-.5)*w/n*.8,y0=y+r()*h*.3,len=h*(.35+r()*.65),a=(r()-.5)*3;
+  s+=`<path d="M${xx.toFixed(1)} ${y0.toFixed(1)} q${a.toFixed(1)} ${(len/4).toFixed(1)} 0 ${(len/2).toFixed(1)} t0 ${(len/2).toFixed(1)}"/>`;}
+  return `<g fill="none" stroke="${col}" stroke-width="${sw}" opacity="${op}" stroke-linecap="round">${s}</g>`;};
+/* 磨石子：一塊可以重複鋪的花紋。id = pattern 名稱，base = 底色，chips = 石粒顏色，n = 一塊裡有幾顆 */
+const TERRAZZO = (id,base,chips,n=46,size=44,seed=7,tf='')=>{const r=RNG(seed);let s='';for(let i=0;i<n;i++){
+  const x=r()*size,y=r()*size,a=.5+r()*1.5,b=.35+r()*1,rot=r()*180;
+  s+=`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${a.toFixed(2)}" ry="${b.toFixed(2)}" fill="${chips[i%chips.length]}" opacity="${(.35+r()*.5).toFixed(2)}" transform="rotate(${rot.toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;}
+  return `<pattern id="${id}" width="${size}" height="${size}" patternUnits="userSpaceOnUse" ${tf?`patternTransform="${tf}"`:''}><rect width="${size}" height="${size}" fill="${base}"/>${s}</pattern>`;};
 
 const DEFS = `<defs>
  <linearGradient id="curtG" x1="0" y1="0" x2="0" y2="1">
@@ -441,26 +459,41 @@ const DEFS = `<defs>
  <linearGradient id="skinG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#E3BC98"/><stop offset=".55" stop-color="#F3D8B8"/><stop offset="1" stop-color="#FBEAD2"/></linearGradient>
  <linearGradient id="skinDim" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#B58D6C"/><stop offset=".6" stop-color="#D2AC88"/><stop offset="1" stop-color="#C39C78"/></linearGradient>
  <linearGradient id="skinFade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C39C78"/><stop offset=".45" stop-color="#A9825F" stop-opacity=".8"/><stop offset="1" stop-color="#6E5038" stop-opacity="0"/></linearGradient>
- <linearGradient id="deckG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A443E"/><stop offset=".12" stop-color="#35302B"/><stop offset="1" stop-color="#211E1B"/></linearGradient>
+ <linearGradient id="deckG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6A625A"/><stop offset=".07" stop-color="#48423C"/><stop offset=".55" stop-color="#2E2A26"/><stop offset="1" stop-color="#1A1816"/></linearGradient>
+ <linearGradient id="deckKey" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A8176"/><stop offset=".18" stop-color="#57504A"/><stop offset="1" stop-color="#2E2A26"/></linearGradient>
+ <linearGradient id="deckRec" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D0705C"/><stop offset=".18" stop-color="#9A3A2E"/><stop offset="1" stop-color="#5E211B"/></linearGradient>
+ <linearGradient id="deckAl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6E675C"/><stop offset=".4" stop-color="#CFC6B2"/><stop offset=".6" stop-color="#9A917F"/><stop offset="1" stop-color="#E4D6B8"/></linearGradient>
+ <linearGradient id="deckWin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2A2622"/><stop offset=".5" stop-color="#0D0B0A"/><stop offset="1" stop-color="#1D1915"/></linearGradient>
  <linearGradient id="shellG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4B4036"/><stop offset="1" stop-color="#2C251F"/></linearGradient>
- <pattern id="grilleP" width="3.4" height="3.4" patternUnits="userSpaceOnUse"><circle cx="1.7" cy="1.7" r=".85" fill="#0E0C0B"/></pattern>
+ <linearGradient id="caseG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9DDB4" stop-opacity=".1"/><stop offset=".5" stop-color="#D9C78E" stop-opacity=".26"/><stop offset="1" stop-color="#F6E7B8" stop-opacity=".42"/></linearGradient>
+ <linearGradient id="boxA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C39A66"/><stop offset="1" stop-color="#8A6840"/></linearGradient>
+ <linearGradient id="boxB" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7A5A36"/><stop offset="1" stop-color="#4E3820"/></linearGradient>
+ <pattern id="grilleP" width="3.4" height="3.4" patternUnits="userSpaceOnUse"><circle cx="1.7" cy="1.7" r=".85" fill="#0E0C0B"/><circle cx="1.4" cy="1.3" r=".3" fill="#6A6258" opacity=".5"/></pattern>
  <linearGradient id="kcG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4A5D70"/><stop offset=".55" stop-color="#2F3E4D"/><stop offset="1" stop-color="#252E37"/></linearGradient>
  <filter id="soft3"><feGaussianBlur stdDeviation="3.2"/></filter>
  <filter id="soft"><feGaussianBlur stdDeviation="7"/></filter>
  <filter id="soft2"><feGaussianBlur stdDeviation="2.2"/></filter>
 </defs>`;
 
+/* 桌上的一捲錄音帶（裝在泛黃的透明盒裡，白色標籤寫日期）。位置固定：上排四捲、下排三捲 */
 const CASSETTE = i => { const x=188+(i%4)*28, y=396+Math.floor(i/4)*36, r=[-3,2,-1.5,3,1.5,-2.5,2][i];
   return `<g class="cas" data-i="${i}" transform="translate(${x} ${y})"><g class="jig"><g transform="rotate(${r} 12 15)">
-   <rect x="1.5" y="2.5" width="24" height="30" rx="1.5" fill="#000" opacity=".4"/>
-   <rect width="24" height="30" rx="1.5" fill="url(#shellG)" stroke="#6A5B49" stroke-width=".6"/>
-   <rect x="2.5" y="2.5" width="19" height="11" rx=".8" fill="#E4D9BD"/>
-   <rect x="2.5" y="2.5" width="19" height="2.2" fill="#8E3B32" opacity=".8"/>
-   <text x="12" y="11.2" font-size="5.6" text-anchor="middle" fill="#2E2A22" font-family="'LXGW WenKai TC','Kaiti TC',serif">8.${11+i}</text>
-   <rect x="4" y="16" width="16" height="8" rx="1" fill="#15120F"/>
-   <circle cx="8.5" cy="20" r="2.6" fill="none" stroke="#8A7D6C" stroke-width=".7"/><circle cx="15.5" cy="20" r="2.6" fill="none" stroke="#8A7D6C" stroke-width=".7"/>
-   <circle cx="2.6" cy="27.4" r=".6" fill="#8A7D6C"/><circle cx="21.4" cy="27.4" r=".6" fill="#8A7D6C"/>
-   <path d="M6 30 h12 l-1.5 -3 h-9 Z" fill="#1E1915"/></g></g></g>`; };
+   <path d="M-1.5 3.5 h24 v29 h-25 Z" fill="#000" opacity=".42"/>
+   <rect width="24" height="30" rx="1.4" fill="url(#shellG)"/>
+   <rect x="3.6" y="15.6" width="16.8" height="9" rx="1.2" fill="#120F0D"/>
+   <circle cx="8.6" cy="20.1" r="3" fill="#5A4030"/><circle cx="15.4" cy="20.1" r="2.2" fill="#5A4030"/>
+   <circle cx="8.6" cy="20.1" r="1.5" fill="#E4DAC2"/><circle cx="15.4" cy="20.1" r="1.5" fill="#E4DAC2"/>
+   <circle cx="8.6" cy="20.1" r=".6" fill="#120F0D"/><circle cx="15.4" cy="20.1" r=".6" fill="#120F0D"/>
+   <path d="M6.4 29.2 h11.2 l-1.4 -2.8 h-8.4 Z" fill="#17130F"/>
+   <rect x="2" y="2" width="20" height="11.6" rx=".7" fill="#EDE3C6"/>
+   <rect x="2" y="2" width="20" height="2.3" rx=".7" fill="#9A4236"/>
+   <path d="M3.4 12.2 h17.2" stroke="#B9AC88" stroke-width=".35"/>
+   <text x="12" y="10.9" font-size="5.7" text-anchor="middle" fill="#2A2620" font-family="'LXGW WenKai TC','Kaiti TC',serif">8.${11+i}</text>
+   <rect width="24" height="30" rx="1.4" fill="url(#caseG)"/>
+   <path d="M1 29 V1.4 Q1 1 1.4 1 H17" fill="none" stroke="#FFF6D8" stroke-width=".5" opacity=".5"/>
+   <path d="M23.4 2 V28.6" stroke="#FFE2A8" stroke-width=".7" opacity=".75"/>
+   <path d="M15 .6 L21 .6 L9 29.4 L5 29.4 Z" fill="#FFF" opacity=".07"/>
+   <rect x=".3" y=".3" width="23.4" height="29.4" rx="1.3" fill="none" stroke="#8A7B5E" stroke-width=".5" opacity=".8"/></g></g></g>`; };
 
 /* 一片一片的紗簾：每一片自己有明暗，下襬被風帶著擺 */
 const SHEER = (x,y,w,h,n,sw)=>`<g class="sheer">${Array.from({length:n},(_,i)=>{
@@ -488,37 +521,86 @@ const FINGERS = (fill='skinG')=>[[296,23,-5],[304.2,27,-1.5],[312.2,25.5,2],[319
    <path d="M${t+7.6} ${c-2} L${t+1.6} ${c-2} A2.7 2 0 0 0 ${t+1.6} ${c+2} L${t+7.6} ${c+2} Q${t+8.8} ${c} ${t+7.6} ${c-2} Z" fill="#F4D3CB" stroke="#D29E92" stroke-width=".3"/>
    <path d="M${t+6.4} ${c-1} H${t+1.4}" fill="none" stroke="#FFF6F0" stroke-width=".5" opacity=".75" stroke-linecap="round"/></g>`}).join('');
 
-/* 錄音機（含放帶的位置與按鍵）、桌上七捲錄音帶：203 房和一樓舊餐廳共用 */
-const DECK = ()=>`<g data-part="deck"><ellipse cx="104" cy="466" rx="72" ry="4" fill="#000" opacity=".5"/>
-     <path d="M62 392 Q62 376 78 376 H130 Q146 376 146 392" fill="none" stroke="#2A2622" stroke-width="4"/>
-     <path d="M62 391 Q62 377 78 377 H130" fill="none" stroke="#5A534B" stroke-width=".7"/>
-     <rect x="38" y="388" width="132" height="76" rx="4" fill="url(#deckG)"/>
-     <rect x="38.5" y="388.5" width="131" height="75" rx="4" fill="none" stroke="#5E564D" stroke-width=".8"/>
-     <rect x="44" y="396" width="40" height="60" rx="2" fill="#191614"/><rect x="45" y="397" width="38" height="58" rx="2" fill="url(#grilleP)"/>
-     <rect x="44" y="396" width="40" height="60" rx="2" fill="none" stroke="#4A433B" stroke-width=".6"/>
-     <rect x="90" y="394" width="74" height="42" rx="2" fill="#141210" stroke="#4A433B" stroke-width=".8"/>
-     <rect x="96" y="400" width="62" height="26" rx="1.5" fill="#0B0A09"/>
-     <rect x="110" y="407" width="34" height="12" fill="#2B2018"/>
-     ${[111,143].map(cx=>`<g class="reel"><circle cx="${cx}" cy="413" r="8.5" fill="#1C1815" stroke="#7A6E60" stroke-width=".9"/>
-       ${[0,60,120].map(a=>`<path d="M${cx-5} 413 h10" stroke="#9A8C79" stroke-width="1" transform="rotate(${a} ${cx} 413)"/>`).join('')}
-       <circle cx="${cx}" cy="413" r="2.4" fill="#0B0A09" stroke="#9A8C79" stroke-width=".7"/></g>`).join('')}
-     <path d="M96 400 h62 l-10 26 h-52 Z" fill="#FFF" opacity=".045"/>
-     <rect x="96" y="429" width="62" height="4" fill="#C9BDA2" opacity=".28"/>
-     ${[0,1,2,3,4].map(i=>`<g><rect x="${91+i*14.8}" y="441" width="13" height="16" rx="1" fill="${i?'#3E3832':'#7A2E26'}"/>
-       <rect x="${91+i*14.8}" y="441" width="13" height="2.4" rx="1" fill="${i?'#6A6157':'#B4503F'}"/>
-       ${['<circle cx="6.5" cy="9.6" r="1.8" fill="#E7C9B8"/>','<path d="M4.6 7 l4.4 2.6 l-4.4 2.6 Z" fill="#CFC4AF"/>','<path d="M6.6 7 l-3.2 2.6 l3.2 2.6 Z M10 7 l-3.2 2.6 l3.2 2.6 Z" fill="#CFC4AF"/>','<path d="M3.4 7 l3.2 2.6 l-3.2 2.6 Z M6.8 7 l3.2 2.6 l-3.2 2.6 Z" fill="#CFC4AF"/>','<rect x="4.4" y="7.4" width="4.4" height="4.4" fill="#CFC4AF"/>'][i].replace(/^<(\w+)/,`<$1 transform="translate(${91+i*14.8} 441)"`)}</g>`).join('')}
-     <circle cx="160" cy="449" r="1.8" fill="#B4503F"><animate attributeName="opacity" dur="2.6s" repeatCount="indefinite" values=".25;1;.25"/></circle>
-     <circle cx="160" cy="449" r="5" fill="#B4503F" opacity=".25" filter="url(#soft2)"/>
+/* 錄音機（含放帶的位置與按鍵）、桌上七捲錄音帶：203 房和一樓舊餐廳共用
+   .m-cas = 透過卡匣窗看到的那捲帶子（放進去才出現）；.kplay = PLAY 鍵帽；.khit = 透明的點擊熱區，位置對準下面的按鍵 */
+const DECK = ()=>{const sc=RNG(93);return `<g data-part="deck">
+     <path d="M22 464 Q104 472 186 464 L176 468 Q104 474 30 468 Z" fill="#000" opacity=".55"/>
+     <path d="M36 466 L8 474 L150 474 L172 466 Z" fill="#000" opacity=".22"/>
+     <path d="M39 448 q-12 1 -20 7 q-12 9 -34 6 q-14 -2 -26 4" fill="none" stroke="#0E0C0B" stroke-width="2"/>
+     <path d="M39 447.4 q-12 1 -20 7 q-12 9 -34 6" fill="none" stroke="#4A443E" stroke-width=".5" opacity=".7"/>
+     <path d="M60 392 Q60 375 78 375 H130 Q148 375 148 392" fill="none" stroke="#1E1B18" stroke-width="4.6"/>
+     <path d="M60 391 Q60 376 78 376 H130 Q141 376 145 381" fill="none" stroke="#7A7268" stroke-width=".8"/>
+     <rect x="56.5" y="386" width="7" height="5" rx="1" fill="#2A2622"/><rect x="144.5" y="386" width="7" height="5" rx="1" fill="#2A2622"/>
+     <rect x="38" y="388" width="132" height="76" rx="5" fill="url(#deckG)"/>
+     <path d="M42 388.7 H166" stroke="#A39A8C" stroke-width=".8" opacity=".7"/>
+     <path d="M169.4 393 V459" stroke="#E0A66A" stroke-width="1" opacity=".55"/>
+     <path d="M38.6 393 V459" stroke="#000" stroke-width="1.2" opacity=".5"/>
+     <rect x="38" y="437" width="132" height="27" rx="5" fill="#000" opacity=".16"/>
+     <g stroke="#000" stroke-width=".4" opacity=".35">${[440,443,446,449,452,455,458,461].map(y=>`<path d="M41 ${y} H88"/>`).join('')}</g>
+     <rect x="170" y="404" width="2.6" height="17" rx="1" fill="#2A2622"/><g stroke="#7A7268" stroke-width=".5">${[406,408.5,411,413.5,416,418.5].map(y=>`<path d="M170 ${y} h2.6"/>`).join('')}</g>
+     <rect x="43" y="395" width="42" height="62" rx="3.4" fill="url(#deckAl)" opacity=".55"/>
+     <rect x="44" y="396" width="40" height="60" rx="3" fill="#151311"/><rect x="45" y="397" width="38" height="58" rx="2.4" fill="url(#grilleP)"/>
+     <path d="M45 455 V399 Q45 397 47 397 H82" fill="none" stroke="#000" stroke-width="1" opacity=".6"/>
+     <path d="M60 397 L83 397 L83 430 Z" fill="#FFE2A8" opacity=".05"/>
+     <rect x="47" y="447.5" width="20" height="5.4" rx=".8" fill="url(#deckAl)"/><text x="57" y="451.8" font-family="Arial,sans-serif" font-size="3.6" font-weight="700" letter-spacing=".4" text-anchor="middle" fill="#2A2622">OCEAN</text>
+     <g fill="#0B0A09"><rect x="86" y="401" width="3" height=".9"/><rect x="86" y="403.2" width="3" height=".9"/><rect x="86" y="405.4" width="3" height=".9"/></g>
+     <rect x="89.4" y="393.4" width="75.2" height="43.2" rx="3" fill="#0A0908"/>
+     <rect x="90" y="394" width="74" height="42" rx="2.6" fill="#1B1815" stroke="#5E564C" stroke-width=".8"/>
+     <path d="M91 435 V396.6 Q91 395 92.6 395 H163" fill="none" stroke="#8A8176" stroke-width=".5" opacity=".7"/>
+     <rect x="96" y="400" width="62" height="26" rx="1.8" fill="url(#deckWin)"/>
+     ${[111,143].map(cx=>`<g class="reel"><circle cx="${cx}" cy="413" r="4.6" fill="#24201C" stroke="#8A7E6E" stroke-width=".8"/>
+       ${[0,60,120].map(a=>`<path d="M${cx-4.2} 413 h8.4" stroke="#B4A690" stroke-width="1" transform="rotate(${a} ${cx} 413)"/>`).join('')}
+       <circle cx="${cx}" cy="413" r="1.7" fill="#0B0A09" stroke="#B4A690" stroke-width=".5"/></g>`).join('')}
+     <g class="m-cas"><rect x="98" y="401.6" width="58" height="23" rx="1.6" fill="#3A3028"/><rect x="98.4" y="402" width="57.2" height="22.2" rx="1.4" fill="none" stroke="#6A5B49" stroke-width=".5"/>
+       <rect x="100.5" y="403" width="53" height="6.6" rx=".6" fill="#EDE3C6"/><rect x="100.5" y="403" width="53" height="1.5" fill="#9A4236"/>
+       <text class="tlabel" x="127" y="408.7" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="4.1" letter-spacing=".5" text-anchor="middle" fill="#2A2620"></text>
+       <rect x="105" y="410.6" width="44" height="11.6" rx="1.6" fill="#0E0C0A" stroke="#5A4E40" stroke-width=".4"/>
+       <circle cx="111" cy="416.4" r="5.4" fill="#5A4030"/><circle cx="143" cy="416.4" r="3.8" fill="#5A4030"/>
+       ${[111,143].map(cx=>`<g class="reel"><circle cx="${cx}" cy="416.4" r="2.9" fill="#E9E1CC"/>${[0,60,120].map(a=>`<path d="M${cx-2.9} 416.4 h5.8" stroke="#1A1512" stroke-width=".8" transform="rotate(${a} ${cx} 416.4)"/>`).join('')}<circle cx="${cx}" cy="416.4" r="1.2" fill="#0E0C0A"/></g>`).join('')}</g>
+     <path d="M96 400 h62 v26 h-62 Z" fill="#8FA39A" opacity=".05"/>
+     <path d="M120 400 h18 l-12 26 h-18 Z" fill="#FFF" opacity=".07"/><path d="M143 400 h6 l-12 26 h-6 Z" fill="#FFF" opacity=".05"/>
+     <path d="M96.6 425 V401.8 Q96.6 400.6 97.8 400.6 H157" fill="none" stroke="#000" stroke-width="1" opacity=".7"/>
+     <rect x="96" y="429" width="62" height="4.4" rx=".6" fill="url(#deckAl)" opacity=".8"/>
+     <g fill="#2A2622" font-family="Arial,sans-serif" font-size="2.6" letter-spacing=".3"><text x="99" y="432.4">TAPE COUNTER</text><text x="141" y="432.4">0 4 7</text></g>
+     <rect x="89" y="439" width="76.4" height="20" rx="1.6" fill="#0A0908"/>
+     ${[0,1,2,3,4].map(i=>{const x=91+i*14.8,ic=['<circle cx="6.5" cy="9.4" r="2" fill="#F4D9CC"/>','<path d="M4.4 6.6 l5 2.8 l-5 2.8 Z" fill="#E4DAC4"/>','<path d="M6.6 6.8 l-3.2 2.6 l3.2 2.6 Z M10 6.8 l-3.2 2.6 l3.2 2.6 Z" fill="#E4DAC4"/>','<path d="M3.4 6.8 l3.2 2.6 l-3.2 2.6 Z M6.8 6.8 l3.2 2.6 l-3.2 2.6 Z" fill="#E4DAC4"/>','<rect x="4.2" y="7.2" width="4.6" height="4.6" fill="#E4DAC4"/>'][i];
+       return `<g${i===1?' class="kplay"':''}><rect x="${x}" y="441" width="13" height="16" rx="1.2" fill="url(#${i?'deckKey':'deckRec'})"/>
+       <path d="M${x+1} 441.6 h11" stroke="${i?'#C9BFAE':'#F2A894'}" stroke-width=".7" opacity=".8"/><path d="M${x+12.6} 442 v14" stroke="#E0A66A" stroke-width=".5" opacity=".5"/>
+       <g opacity="${[.9,.42,.7,.5,.8][i]}">${ic.replace(/^<(\w+)/,`<$1 transform="translate(${x} 441)"`)}</g>
+       <path d="M${x+2} ${452+i%2} l${4+i} -${3+i%3}" stroke="${i?'#57504A':'#9A3A2E'}" stroke-width="1.1" opacity="${i===1||i===3?.9:0}"/></g>`}).join('')}
+     <circle cx="80" cy="460.4" r="1.2" fill="#B4503F"><animate attributeName="opacity" dur="2.6s" repeatCount="indefinite" values=".3;1;.3"/></circle>
+     <text x="70" y="461.6" font-family="Arial,sans-serif" font-size="2.6" letter-spacing=".3" fill="#8A8176" opacity=".8">BATT</text>
+     <g fill="none" stroke="#B9AE9C" stroke-linecap="round" opacity=".3">${Array.from({length:9},()=>{const x=42+sc()*120,y=390+sc()*70,l=3+sc()*11,a=sc()*2-1;return `<path d="M${x.toFixed(1)} ${y.toFixed(1)} l${l.toFixed(1)} ${(a*4).toFixed(1)}" stroke-width="${(.25+sc()*.3).toFixed(2)}"/>`}).join('')}</g>
+     <path d="M38 460 Q38 464 43 464 H52" fill="none" stroke="#8A8176" stroke-width=".9" opacity=".5"/><path d="M165 388.4 Q170 388.6 169.6 394" fill="none" stroke="#C9BFAE" stroke-width=".9" opacity=".6"/>
+     <rect x="46" y="463.4" width="12" height="2.4" rx="1" fill="#0B0A09"/><rect x="150" y="463.4" width="12" height="2.4" rx="1" fill="#0B0A09"/>
    </g>
    <rect class="slot" x="86" y="390" width="82" height="50" rx="3"/>
-   <rect class="khit m-play" x="104" y="434" width="16" height="30" rx="2"/><rect class="khit m-rew" x="119" y="434" width="16" height="30" rx="2"/><rect class="khit m-eject" x="148" y="434" width="17" height="30" rx="2"/>`;
-const TAPES = ()=>`<g data-part="tapes">${[0,1,2,3,4,5,6].map(CASSETTE).join('')}</g>`;
+   <rect class="khit m-play" x="104" y="436" width="16" height="26" rx="2"/><rect class="khit m-rew" x="119" y="436" width="16" height="26" rx="2"/><rect class="khit m-eject" x="148" y="436" width="17" height="26" rx="2"/>`;};
+/* 錄音帶盒：掀開的盒蓋立著放上排四捲，盒底平放下排三捲；每一格底下有凹槽，帶子被拿走時看得到空位 */
+const TAPES = ()=>`<g data-part="tapes">
+   <path d="M168 466 Q244 474 318 466 L310 470 Q244 476 176 470 Z" fill="#000" opacity=".5"/>
+   <path d="M181 430 H305 L310 466 H176 Z" fill="#2A1F18"/><path d="M184 432 H302 L306 463 H180 Z" fill="#3B2A22"/>
+   <rect x="176" y="463" width="134" height="5" rx="1" fill="#4A372B"/><path d="M176 463.4 H310" stroke="#8A6B4E" stroke-width=".6" opacity=".7"/>
+   <rect x="238" y="462.4" width="10" height="5" rx="1" fill="#B49A66"/><rect x="240" y="463.6" width="6" height="1" fill="#F0DCA6" opacity=".7"/>
+   <rect x="182" y="389" width="122" height="42" rx="2.4" fill="#33261E"/><rect x="185" y="392" width="116" height="37" rx="1.4" fill="#231914"/>
+   <path d="M183 430 V391.4 Q183 390 184.4 390 H303" fill="none" stroke="#7A5E46" stroke-width=".6" opacity=".7"/>
+   <path d="M303.4 391 V430" stroke="#E0A66A" stroke-width=".8" opacity=".5"/>
+   <rect x="196" y="429" width="12" height="3" rx="1" fill="#B49A66" opacity=".8"/><rect x="278" y="429" width="12" height="3" rx="1" fill="#B49A66" opacity=".8"/>
+   <g fill="#150F0C" stroke="#4A372B" stroke-width=".4">${[0,1,2,3,4,5,6,7].map(i=>`<rect x="${188.5+(i%4)*28}" y="${396.5+Math.floor(i/4)*36}" width="23" height="29" rx="1.2"/>`).join('')}</g>
+   ${[0,1,2,3,4,5,6].map(CASSETTE).join('')}</g>`;
 /* 紙箱（隔天早上開始整理時出現） */
-const BOXES=(x,y,s=1,label='')=>`<g transform="translate(${x} ${y}) scale(${s})"><ellipse cx="40" cy="62" rx="56" ry="5" fill="#000" opacity=".4"/>
-  <rect x="0" y="22" width="52" height="40" fill="#8A6A44"/><rect x="0" y="22" width="52" height="5" fill="#A8845A"/><path d="M26 22 V62" stroke="#D9C9A0" stroke-width="3" opacity=".6"/>
-  <rect x="44" y="30" width="44" height="32" fill="#7A5C3A"/><path d="M66 30 V62" stroke="#D9C9A0" stroke-width="3" opacity=".6"/>
-  <rect x="8" y="-8" width="40" height="30" fill="#9A7A50"/><path d="M28 -8 V22" stroke="#D9C9A0" stroke-width="3" opacity=".6"/>
-  <text x="14" y="52" font-family="sans-serif" font-size="8" fill="#1A120C">${label}</text></g>`;
+const BOXES=(x,y,s=1,label='')=>`<g transform="translate(${x} ${y}) scale(${s})"><path d="M-10 62 Q40 70 100 62 L92 66 Q40 72 -4 66 Z" fill="#000" opacity=".45"/>
+  <g><path d="M0 24 H52 V62 H0 Z" fill="url(#boxA)"/><path d="M52 24 l8 -5 V57 l-8 5 Z" fill="url(#boxB)"/><path d="M0 24 l8 -5 H60 l-8 5 Z" fill="#D2AC78"/>
+   <path d="M22 24 h8 V62 h-8 Z" fill="#E6D6A8" opacity=".55"/><path d="M22 24 l8 -5 h8 l-8 5 Z" fill="#F2E6C0" opacity=".6"/><path d="M23.4 24 V62" stroke="#FFF" stroke-width=".5" opacity=".3"/>
+   <path d="M0 24 H52" stroke="#6A4E2C" stroke-width=".7"/><rect x="36" y="34" width="10" height="4" rx="2" fill="#5E4426"/>
+   <text x="5" y="54" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="8.5" fill="#3A2814" opacity=".85" transform="rotate(-4 5 54)">${label}</text></g>
+  <g><path d="M48 34 H88 V62 H48 Z" fill="#A27C4E"/><path d="M88 34 l7 -4 V58 l-7 4 Z" fill="#5E4426"/><path d="M48 34 l7 -4 H95 l-7 4 Z" fill="#BE9662"/>
+   <path d="M64 34 h7 V62 h-7 Z" fill="#E6D6A8" opacity=".45"/><path d="M48 34 H88" stroke="#5E4426" stroke-width=".7"/>
+   <path d="M52 40 l6 0 M52 43 l10 0" stroke="#5E4426" stroke-width=".8" opacity=".6"/></g>
+  <g><path d="M8 -6 H46 V24 H8 Z" fill="#B48C5A"/><path d="M46 -6 l7 -4 V19 l-7 5 Z" fill="#6E5230"/>
+   <path d="M8 -6 l5 -9 H40 l6 9 Z" fill="#C9A26C"/><path d="M46 -6 l-6 -9 l9 -3 l4 8 Z" fill="#8A6840"/>
+   <path d="M24 -6 h7 V24 h-7 Z" fill="#E6D6A8" opacity=".5"/><path d="M8 -6 H46" stroke="#6A4E2C" stroke-width=".7"/>
+   <path d="M12 6 q4 -3 8 0 q-4 5 -8 0 Z M14 10 v4 M18 10 v4" fill="none" stroke="#5E4426" stroke-width=".7" opacity=".6"/></g></g>`;
 /* 南部小城的街（下午與傍晚共用） */
 const STREET = ()=>`
  <defs>
@@ -712,155 +794,363 @@ vision:()=>SVG('vision',`
 
 street:()=>SVG('street',STREET()),
 
-lobby:()=>SVG('lobby',`
+lobby:()=>{
+ const r=RNG(1993);
+ const streaks=Array.from({length:16},()=>{const x=-36+r()*470,y=120+r()*40,l=60+r()*260,w=1.5+r()*5;return `<path d="M${x.toFixed(0)} ${y.toFixed(0)} q${(r()*4-2).toFixed(1)} ${(l/2).toFixed(0)} 0 ${l.toFixed(0)}" stroke-width="${w.toFixed(1)}" opacity="${(.06+r()*.12).toFixed(2)}"/>`}).join('');
+ /* 一把掛著的鑰匙：黃銅鑰匙 + 紅色塑膠牌 */
+ const key=(x,n)=>`<g class="swing"><path d="M${x} 217 v9" stroke="#C9B078" stroke-width=".9"/>
+   <circle cx="${x}" cy="230" r="3.6" fill="none" stroke="#D9BC7A" stroke-width="1.5"/><path d="M${x-2.6} 228 a3.6 3.6 0 0 1 4 -1.4" fill="none" stroke="#FFF1C8" stroke-width=".6"/>
+   <rect x="${x-1.2}" y="233.4" width="2.4" height="12" fill="#C9A860"/><path d="M${x+1.2} 240 h3.2 v1.6 h-3.2 M${x+1.2} 243.4 h2.2 v1.4 h-2.2" fill="#C9A860"/><path d="M${x-.6} 234 v11" stroke="#FFF1C8" stroke-width=".5" opacity=".7"/>
+   <path d="M${x-6} 250 q0 -3 6 -3 q6 0 6 3 v11 q0 3 -6 3 q-6 0 -6 -3 Z" fill="#8E3228"/><path d="M${x-5} 250 q0 -2 5 -2" fill="none" stroke="#E08A78" stroke-width=".7" opacity=".8"/>
+   <circle cx="${x}" cy="250" r="1" fill="#1A0E0A"/><text x="${x}" y="260.6" font-family="Georgia,serif" font-size="5.2" text-anchor="middle" fill="#F2DCC8" opacity=".85">${n}</text></g>`;
+ return SVG('lobby',`
  <defs>
-  <linearGradient id="lbWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#18222A"/><stop offset="1" stop-color="#0E1519"/></linearGradient>
-  <linearGradient id="lbSheet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#55646C"/><stop offset=".5" stop-color="#34424A"/><stop offset="1" stop-color="#1A2429"/></linearGradient>
-  <linearGradient id="lbWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A2B20"/><stop offset="1" stop-color="#1B130E"/></linearGradient>
+  <linearGradient id="lbWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E2C2E"/><stop offset=".7" stop-color="#2A3A38"/><stop offset="1" stop-color="#1A2624"/></linearGradient>
+  <linearGradient id="lbSheet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7E8A8A"/><stop offset=".55" stop-color="#A8AAA0"/><stop offset="1" stop-color="#E4D4B4"/></linearGradient>
+  <linearGradient id="lbWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E2C20"/><stop offset=".7" stop-color="#2A1D15"/><stop offset="1" stop-color="#4A3424"/></linearGradient>
+  <linearGradient id="lbFloorSh" x1="0" y1="470" x2="0" y2="700" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#060A0C" stop-opacity=".62"/><stop offset=".3" stop-color="#060A0C" stop-opacity=".25"/><stop offset="1" stop-color="#060A0C" stop-opacity="0"/></linearGradient>
+  <linearGradient id="lbSun" x1="0" y1="486" x2="0" y2="600" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFD9A0" stop-opacity=".22"/><stop offset="1" stop-color="#FFE9BE" stop-opacity=".75"/></linearGradient>
+  <linearGradient id="lbFac" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#D9C49A"/><stop offset=".5" stop-color="#CDB88E"/><stop offset="1" stop-color="#B8A27A"/></linearGradient>
+  <linearGradient id="lbFrame" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5E7268"/><stop offset=".5" stop-color="#34463E"/><stop offset="1" stop-color="#22302A"/></linearGradient>
+  <linearGradient id="lbGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#CFE0DC" stop-opacity=".2"/><stop offset=".4" stop-color="#9DB4B0" stop-opacity=".06"/><stop offset="1" stop-color="#0A1317" stop-opacity=".2"/></linearGradient>
+  <linearGradient id="lbSign" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5E7E92"/><stop offset="1" stop-color="#3E5A6C"/></linearGradient>
+  <radialGradient id="lbBulb" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#F6EED8"/><stop offset=".5" stop-color="#B8AE94"/><stop offset="1" stop-color="#6A6452"/></radialGradient>
+  <linearGradient id="lbBrass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F0DCA6"/><stop offset=".5" stop-color="#A8864C"/><stop offset="1" stop-color="#5E4522"/></linearGradient>
+  <pattern id="lbTile" width="9" height="9" patternUnits="userSpaceOnUse"><rect width="9" height="9" fill="#8A7A5E"/><rect x=".6" y=".6" width="7.8" height="7.8" fill="#A8946E"/><path d="M.6 8.4 V.6 H8.4" fill="none" stroke="#C9B48A" stroke-width=".5"/></pattern>
+  ${TERRAZZO('lbTz','#5E6A62',['#C9CDB8','#2E3832','#9AA090','#E4DCC4','#7E5E4E'],44,44,19,'matrix(1.6 0 0 .6 0 470)')}
  </defs>
- ${BG('#0A0F12')}
- ${Z(.2,`<rect x="40" y="120" width="320" height="350" fill="url(#lbWall)"/>
-   <rect x="40" y="392" width="320" height="78" fill="#0F171B"/><rect x="40" y="390" width="320" height="2.4" fill="#26333A"/>
-   <g stroke="#172127" stroke-width="1">${[0,1,2,3,4,5,6,7,8].map(i=>`<path d="M${60+i*36} 394 v76"/>`).join('')}</g>
-   <path d="M40 470 L360 470 L480 760 L-80 760 Z" fill="#12191D"/>
-   <g stroke="#0B1114" stroke-width="1">${[-4,-3,-2,-1,0,1,2,3,4].map(k=>`<path d="M${200+k*40} 470 L${200+k*120} 760"/>`).join('')}
-     ${[490,520,562,620].map(y=>`<path d="M-80 ${y} H480"/>`).join('')}</g>
-   <path d="M150 470 L250 470 L330 760 L70 760 Z" fill="#C9BDA2" opacity=".07"/>
-   <g><circle cx="318" cy="214" r="15" fill="#1D282E" stroke="#34444C" stroke-width="1.4"/><circle cx="318" cy="214" r="12" fill="#B9AD92" opacity=".22"/>
-     <path d="M318 214 v-8 M318 214 l6 4" stroke="#0A0F12" stroke-width="1.2" stroke-linecap="round"/></g>`)}
- ${Z(.45,`<g data-part="keys"><rect x="132" y="200" width="144" height="106" fill="#000" opacity=".4" filter="url(#soft2)"/>
-   <rect x="128" y="196" width="144" height="106" fill="#221912"/><rect x="128" y="196" width="144" height="106" fill="none" stroke="#4A3828" stroke-width="2"/>
-   <rect x="134" y="202" width="132" height="94" fill="#150F0B"/>
-   ${[0,1,2,3,4].map(i=>{const x=148+i*26;return `<g><circle cx="${x}" cy="216" r="1.8" fill="#8A6B3F"/>
-     ${i===2?'':`<g class="swing"><path d="M${x} 217 v10" stroke="#8A7A5A" stroke-width=".9"/><circle cx="${x}" cy="230" r="3.4" fill="none" stroke="#B49A66" stroke-width="1.2"/>
-       <rect x="${x-1.2}" y="233" width="2.4" height="12" fill="#B49A66"/><path d="M${x+1.2} 240 h3 M${x+1.2} 243.4 h2" stroke="#B49A66" stroke-width="1.2"/>
-       <rect x="${x-6}" y="247" width="12" height="16" rx="2" fill="${'#7A2E26'}" opacity=".9"/><circle cx="${x}" cy="250" r="1" fill="#150F0B"/></g>`}
-     <rect x="${x-9}" y="272" width="18" height="11" rx="1" fill="#2A2018" stroke="#4A3828" stroke-width=".5"/>
-     <text x="${x}" y="280.4" font-family="serif" font-size="7" text-anchor="middle" fill="${i===2?'#D0604C':'#A8946A'}">${201+i}</text></g>`}).join('')}</g>`)}
- ${Z(.58,`<rect x="96" y="342" width="216" height="8" fill="#4A3626"/><rect x="96" y="342" width="216" height="1.2" fill="#8A6B48" opacity=".7"/>
+ ${BG('#0A1012')}
+ ${Z(.2,`
+   <!-- 遠景：大廳後牆、木牆裙、磨石子地 -->
+   <rect x="30" y="100" width="340" height="372" fill="url(#lbWall)"/>
+   <g fill="#0E1618" opacity=".5"><path d="M60 120 q10 60 -4 130 q16 -50 12 -130 Z"/><path d="M344 150 q-12 50 2 120 q-14 -40 -10 -120 Z"/></g>
+   <rect x="30" y="392" width="340" height="80" fill="#22180F"/><rect x="30" y="388" width="340" height="4.4" fill="#4A3626"/><rect x="30" y="388" width="340" height="1" fill="#8A6B48" opacity=".6"/>
+   <g stroke="#120C08" stroke-width="1.2">${[0,1,2,3,4,5,6,7,8,9].map(i=>`<path d="M${44+i*36} 394 v76"/>`).join('')}</g>
+   <g stroke="#3E2C1E" stroke-width=".6" opacity=".8">${[0,1,2,3,4,5,6,7,8,9].map(i=>`<path d="M${45.4+i*36} 394 v76"/>`).join('')}</g>
+   <path d="M30 470 L370 470 L490 770 L-90 770 Z" fill="url(#lbTz)"/>
+   <g stroke="#B49A5E" stroke-width=".8" opacity=".45">${[-4,-3,-2,-1,0,1,2,3,4].map(k=>`<path d="M${200+k*40} 470 L${200+k*124} 770"/>`).join('')}
+     ${[486,510,546,600,680].map(y=>`<path d="M-90 ${y} H490"/>`).join('')}</g>
+   <path d="M30 470 L370 470 L490 770 L-90 770 Z" fill="url(#lbFloorSh)"/>
+   <!-- 從門口斜進來的午後陽光，只照到門口附近 -->
+   <path d="M120 488 L330 500 L400 770 L20 770 Z" fill="url(#lbSun)"/>
+   <path d="M190 492 L198 492.6 L196 770 L176 770 Z" fill="#0A1012" opacity=".3"/>
+   <!-- 停掉的鐘、牆上的房價表、營業登記 -->
+   <g><circle cx="318" cy="215" r="16" fill="#000" opacity=".4"/><circle cx="318" cy="214" r="15" fill="#3A2A1C" stroke="#6A4E32" stroke-width="1"/><circle cx="318" cy="214" r="12.4" fill="#B8B09A"/>
+     ${[0,1,2,3,4,5,6,7,8,9,10,11].map(i=>`<path d="M318 203.6 v${i%3?1.4:2.6}" stroke="#2A2218" stroke-width="${i%3?.5:.9}" transform="rotate(${i*30} 318 214)"/>`).join('')}
+     <path d="M318 214 v-8.4 M318 214 l6 3.6" stroke="#1A140E" stroke-width="1.2" stroke-linecap="round"/><circle cx="318" cy="214" r="1.2" fill="#1A140E"/>
+     <path d="M309 207 q5 -6 12 -4" fill="none" stroke="#FFF" stroke-width="1" opacity=".3" stroke-linecap="round"/></g>
+   <g><rect x="296" y="246" width="46" height="58" fill="#2A1D15" stroke="#4A3626" stroke-width="1"/><rect x="299" y="249" width="40" height="52" fill="#8A8672" opacity=".55"/>
+     <text x="319" y="259" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="6.4" letter-spacing="1.4" text-anchor="middle" fill="#1A1610">房 價 表</text>
+     <g stroke="#1A1610" stroke-width=".6" opacity=".6">${[265,271,277,283,289,295].map(y=>`<path d="M303 ${y} h14 M323 ${y} h12"/>`).join('')}</g></g>
+   <g transform="rotate(1.4 80 226)"><rect x="60" y="204" width="42" height="52" fill="#3A2A1C" stroke="#6A4E32" stroke-width=".8"/><rect x="64" y="208" width="34" height="44" fill="#9A9684" opacity=".6"/>
+     <g stroke="#2A2218" stroke-width=".6" opacity=".55"><path d="M69 216 h24 M69 222 h20 M69 228 h24 M69 234 h16"/></g><circle cx="88" cy="243" r="4" fill="none" stroke="#8E3228" stroke-width=".8" opacity=".7"/>
+     <path d="M64 208 l14 0 l-12 44 l-2 0 Z" fill="#FFF" opacity=".07"/></g>
+   <!-- 通往後面的門洞，掛著半截布簾 -->
+   <rect x="346" y="262" width="30" height="208" fill="#05080A"/><path d="M346 262 h30 v74 q-8 6 -15 0 q-8 6 -15 0 Z" fill="#3E4A52" opacity=".8"/><path d="M353 262 v72 M361 262 v76 M369 262 v72" stroke="#1A2428" stroke-width=".8"/>`)}
+ ${Z(.45,`<!-- 鑰匙架：203 那一格是空的，只剩一塊比較乾淨的牌子印 -->
+   <g data-part="keys"><rect x="132" y="201" width="144" height="106" fill="#000" opacity=".45"/>
+   <rect x="128" y="196" width="144" height="106" fill="#3A2A1C"/><path d="M128 302 V196 H272" fill="none" stroke="#7A5A3C" stroke-width="1.2"/><path d="M128 302 H272 V196" fill="none" stroke="#160E09" stroke-width="1.4"/>
+   <rect x="134" y="202" width="132" height="94" fill="#1C2A26"/><path d="M134 296 V202 H266" fill="none" stroke="#0A100E" stroke-width="1.6"/>
+   <g stroke="#101A16" stroke-width=".8" opacity=".8">${[161,187,213,239].map(x=>`<path d="M${x} 204 V294"/>`).join('')}</g>
+   <rect x="134" y="266" width="132" height="1.2" fill="#3E4E46" opacity=".7"/>
+   ${[0,1,2,3,4].map(i=>{const x=148+i*26;return `<g><path d="M${x} 213.4 v3 q0 2.4 2.4 1.6" fill="none" stroke="#D9BC7A" stroke-width="1.1" stroke-linecap="round"/><circle cx="${x}" cy="212.6" r="1.7" fill="#B8965A"/><circle cx="${x-.5}" cy="212.1" r=".6" fill="#FFF1C8"/>
+     ${i===2?`<path d="M${x-6} 250 q0 -3 6 -3 q6 0 6 3 v11 q0 3 -6 3 q-6 0 -6 -3 Z" fill="#2E4038" opacity=".9"/>`:key(x,201+i)}
+     <rect x="${x-9.4}" y="272" width="18.8" height="11.6" rx="1" fill="url(#lbBrass)" opacity="${i===2?1:.8}"/><rect x="${x-8.6}" y="272.8" width="17.2" height="10" rx=".6" fill="none" stroke="#3A2A12" stroke-width=".4"/>
+     <text x="${x}" y="280.8" font-family="Georgia,serif" font-size="7" text-anchor="middle" fill="#2A1C10">${201+i}</text></g>`}).join('')}</g>`)}
+ ${Z(.58,`<!-- 櫃檯：木板牆面、擦過的檯面、服務鈴、住客登記簿、檯燈 -->
+   <path d="M90 478 Q200 486 318 478 L312 474 H96 Z" fill="#000" opacity=".5"/>
    <rect x="102" y="350" width="204" height="124" fill="url(#lbWood)"/>
-   <g stroke="#120C08" stroke-width="1.2">${[0,1,2,3,4,5].map(i=>`<path d="M${120+i*34} 356 v112"/>`).join('')}</g>
-   <rect x="102" y="466" width="204" height="8" fill="#0D0907"/>
-   <g><ellipse cx="150" cy="342" rx="11" ry="2" fill="#1B130E"/><path d="M141 341 q9 -15 18 0 Z" fill="#8A7446"/><path d="M144 339 q5 -9 9 -2" fill="none" stroke="#D9C48A" stroke-width=".8" opacity=".6"/><circle cx="150" cy="331" r="1.5" fill="#B49A66"/></g>
-   <g transform="rotate(-3 236 338)"><rect x="210" y="334" width="52" height="7" fill="#3A2420"/><rect x="212" y="332.6" width="48" height="2" fill="#CFC3A6" opacity=".7"/></g>
-   <path d="M286 342 v-22 q0 -6 -8 -6" fill="none" stroke="#2A2018" stroke-width="2"/><path d="M270 314 h14 l4 10 h-22 Z" fill="#33414A"/>`)}
- ${Z(.78,`<g data-part="sheet"><ellipse cx="124" cy="562" rx="50" ry="6" fill="#000" opacity=".5"/>
-   <g class="breathe"><path d="M92 470 Q98 428 124 424 Q152 426 158 470 L166 560 Q124 568 84 560 Z" fill="url(#lbSheet)"/>
-   <g fill="none" stroke="#0E1519" stroke-width="1" opacity=".55"><path d="M104 446 Q108 500 100 560"/><path d="M124 430 Q128 490 122 564"/><path d="M146 448 Q146 500 152 560"/></g>
-   <path d="M94 468 Q100 432 124 427" fill="none" stroke="#8FA0A8" stroke-width=".9" opacity=".6"/></g></g>
-   <ellipse cx="270" cy="568" rx="64" ry="6" fill="#000" opacity=".5"/>
-   <path d="M214 500 Q216 462 244 458 L300 458 Q326 462 328 500 L334 566 Q270 574 208 566 Z" fill="url(#lbSheet)" opacity=".92"/>
-   <g fill="none" stroke="#0E1519" stroke-width="1" opacity=".5"><path d="M236 468 Q240 520 232 566"/><path d="M272 460 Q274 520 270 570"/><path d="M306 470 Q306 520 314 566"/></g>
-   <path d="M216 498 Q220 466 244 461 L296 461" fill="none" stroke="#8FA0A8" stroke-width=".9" opacity=".5"/>
-   <g class="m-boxes">${BOXES(300,420,1)}<path d="M372 474 L388 384 M384 476 L400 386" stroke="#9AA2A6" stroke-width="2.2"/><path d="M376 452 h12 M380 430 h12 M384 408 h12" stroke="#9AA2A6" stroke-width="1.6"/></g>`)}
- ${Z(1,`<g data-part="door"><path d="M-60 -60 H460 V800 H-60 Z M58 190 V800 H342 V190 Z" fill="#06090B" fill-rule="evenodd"/>
-   <path d="M58 800 V190 H342 V800" fill="none" stroke="#2A3840" stroke-width="1.4"/>
-   <rect x="58" y="150" width="284" height="40" fill="#0B1114"/><rect x="62" y="154" width="276" height="32" fill="#10191D" stroke="#22303A" stroke-width=".8"/>
-   <text x="200" y="176" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="15" letter-spacing="9" text-anchor="middle" fill="#8A7446" opacity=".5">碧海行館</text>
-   <g fill="#2E2A22" stroke="#4A4436" stroke-width=".6">${Array.from({length:12},(_,i)=>`<circle cx="${76+i*22.5}" cy="142" r="3.4"/>`).join('')}</g>
-   <g class="m-door"><rect x="58" y="190" width="284" height="620" fill="#0A1317" opacity=".42"/>
-     <path d="M76 204 l64 0 l-64 250 Z" fill="#FFF" opacity=".06"/><path d="M176 196 l44 0 l-100 360 l-30 0 Z" fill="#FFF" opacity=".035"/>
-     <rect x="58" y="190" width="284" height="620" fill="none" stroke="#3A4A52" stroke-width="3"/>
-     <rect x="66" y="198" width="268" height="604" fill="none" stroke="#22303A" stroke-width="1"/>
-     <rect x="82" y="396" width="6" height="96" rx="3" fill="#8A7446"/><rect x="82" y="396" width="2" height="96" rx="1" fill="#D9C48A" opacity=".5"/>
-     <g data-part="notice"><rect x="214" y="290" width="54" height="74" fill="#D6C9A2" opacity=".9"/><rect x="226" y="286" width="14" height="7" fill="#E9E4D8" opacity=".5"/>
-       ${'本館暫停營業'.split('').map((c,i)=>`<text x="241" y="${306+i*10.4}" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="9.4" text-anchor="middle" fill="#4A3A28">${c}</text>`).join('')}</g></g></g>`)}
-`),
+   ${GRAINV(104,352,200,118,16,29,'#120C08',.5,.6)}
+   <g stroke="#120C08" stroke-width="1.4">${[0,1,2,3,4,5,6].map(i=>`<path d="M${119+i*28.4} 356 v112"/>`).join('')}</g>
+   <g stroke="#6A4A32" stroke-width=".6" opacity=".7">${[0,1,2,3,4,5,6].map(i=>`<path d="M${120.4+i*28.4} 356 v112"/>`).join('')}</g>
+   <rect x="102" y="462" width="204" height="12" fill="#1A120C"/><rect x="102" y="462" width="204" height="1" fill="#6A4A32" opacity=".7"/>
+   <path d="M102 440 H306 V474 H102 Z" fill="#FFD9A0" opacity=".07"/>
+   <rect x="96" y="341" width="216" height="9" rx="1" fill="#5A4230"/><rect x="96" y="341" width="216" height="1.6" fill="#B8926A" opacity=".8"/><rect x="96" y="348.6" width="216" height="1.4" fill="#160E09"/>
+   <path d="M166 342.2 q30 -1 60 .6" stroke="#E4C8A0" stroke-width="1.6" opacity=".45" stroke-linecap="round"/>
+   <g><ellipse cx="150" cy="341.6" rx="12" ry="2.2" fill="#1B130E"/><path d="M140.6 340.6 q9.4 -16 18.8 0 Z" fill="url(#lbBrass)"/><path d="M144 338 q4.6 -8.6 9 -3" fill="none" stroke="#FFF6D8" stroke-width=".9" opacity=".8"/><rect x="148.8" y="327.6" width="2.4" height="3.4" fill="#8A6A3A"/><circle cx="150" cy="327" r="1.8" fill="#D9BC7A"/></g>
+   <g transform="rotate(-3 236 338)"><path d="M209 341 h54 l-2 -7 h-50 Z" fill="#2E1E1A"/><path d="M211 334 h50 l-.6 -2.4 q-12 -2 -24 0 q-12 -2 -24.6 0 Z" fill="#D9CDB0"/><path d="M236 331.6 v2.6" stroke="#8A7E64" stroke-width=".6"/>
+     <g stroke="#8A7E64" stroke-width=".4" opacity=".8"><path d="M215 332.8 h18 M240 332.8 h18"/></g><path d="M244 330 l16 -5" stroke="#1A2A3A" stroke-width="1.4" stroke-linecap="round"/><path d="M258.6 325.4 l2 -.6" stroke="#C9A860" stroke-width="1.4" stroke-linecap="round"/></g>
+   <g><ellipse cx="284" cy="341.4" rx="9" ry="1.8" fill="#1B130E"/><rect x="277" y="338" width="14" height="3.4" rx="1" fill="url(#lbBrass)"/><path d="M284 338 v-18" stroke="#A8864C" stroke-width="2"/><path d="M283.4 338 v-18" stroke="#F0DCA6" stroke-width=".6" opacity=".8"/>
+     <path d="M268 322 q2 -9 16 -9 q14 0 16 9 Z" fill="#2E5446"/><path d="M270 320.6 q3 -6 13 -6.6" fill="none" stroke="#8FB8A2" stroke-width=".9" opacity=".7"/><rect x="268" y="321.4" width="32" height="1.6" fill="#D9BC7A"/></g>`)}
+ ${Z(.78,`<!-- 中景：罩著白布的椅子，下襬接到門口的光；隔天早上椅子後面多了紙箱和鋁梯 -->
+   <g class="m-boxes">${BOXES(262,400,.86,'清潔')}<g stroke="#AEB6B8" stroke-linecap="round"><path d="M336 470 L328 372 M346 470 L336 374" stroke-width="2.2"/><path d="M335 448 h9.4 M333 426 h9 M331.4 404 h8.4 M329.6 384 h8" stroke-width="1.6"/></g></g>
+   <g data-part="sheet"><path d="M66 562 Q124 574 182 560 L172 567 Q124 576 76 567 Z" fill="#000" opacity=".55"/>
+   <g class="breathe"><path d="M97 474 Q94 440 104 430 Q112 424 124 424 Q138 424 146 430 Q156 440 153 474 Q166 478 168 490 Q170 524 174 558 q-8 5 -16 2 q-8 5 -17 2 q-9 4 -18 1 q-9 4 -18 0 q-8 3 -15 -2 q-8 2 -12 -3 Q80 524 82 490 Q84 478 97 474 Z" fill="url(#lbSheet)"/>
+   <path d="M97 474 Q124 484 153 474 Q166 478 168 490 Q124 500 82 490 Q84 478 97 474 Z" fill="#C9CCC0" opacity=".5"/>
+   <g fill="#3E4A4E" opacity=".3"><path d="M104 436 Q110 456 104 476 Q100 456 104 436 Z"/><path d="M140 434 Q148 456 146 476 Q138 458 140 434 Z"/><path d="M96 494 Q104 530 94 562 Q88 530 96 494 Z"/><path d="M118 497 Q126 530 121 565 Q112 532 118 497 Z"/><path d="M142 496 Q152 530 156 562 Q142 534 142 496 Z"/><path d="M160 492 Q168 520 172 556 Q160 530 160 492 Z"/></g>
+   <g fill="none" stroke="#FFFBEE" stroke-linecap="round"><path d="M98 466 Q97 438 108 429 Q116 424.4 126 424.4" stroke-width="1" opacity=".6"/><path d="M108 500 Q112 530 107 562" stroke-width="2" opacity=".28"/><path d="M132 500 Q136 530 139 563" stroke-width="2" opacity=".25"/><path d="M84 492 Q124 501 166 492" stroke-width=".8" opacity=".5"/></g>
+   <path d="M80 548 Q124 560 172 548 L174 558 q-8 5 -16 2 q-8 5 -17 2 q-9 4 -18 1 q-9 4 -18 0 q-8 3 -15 -2 q-8 2 -12 -3 Z" fill="#FFE9C0" opacity=".4"/></g></g>
+   <path d="M190 568 Q270 582 352 566 L340 573 Q270 584 202 573 Z" fill="#000" opacity=".55"/>
+   <path d="M206 562 Q208 520 211 506 Q211 490 224 488 L232 488 Q232 464 247 459 L297 459 Q312 464 312 488 L320 488 Q333 490 333 506 Q335 520 338 562 q-9 6 -18 3 q-10 5 -20 2 q-10 5 -21 2 q-10 4 -21 1 q-10 4 -20 0 q-10 2 -18 -3 q-8 0 -14 -5 Z" fill="url(#lbSheet)"/>
+   <path d="M232 488 Q272 496 312 488 L314 508 Q272 518 230 508 Z" fill="#C9CCC0" opacity=".45"/>
+   <g fill="#3E4A4E" opacity=".3"><path d="M240 464 Q246 478 240 490 Q236 478 240 464 Z"/><path d="M302 464 Q308 478 306 490 Q298 478 302 464 Z"/><path d="M218 494 Q226 530 216 566 Q210 530 218 494 Z"/><path d="M244 512 Q252 540 246 570 Q238 542 244 512 Z"/><path d="M270 514 Q276 542 272 572 Q264 544 270 514 Z"/><path d="M298 512 Q306 540 304 570 Q294 544 298 512 Z"/><path d="M324 494 Q332 530 336 562 Q322 532 324 494 Z"/></g>
+   <g fill="none" stroke="#FFFBEE" stroke-linecap="round"><path d="M233 486 Q233 465 248 460 L296 460" stroke-width="1" opacity=".55"/><path d="M212 504 Q212 491 224 489" stroke-width=".9" opacity=".5"/><path d="M256 516 Q260 544 257 570" stroke-width="2.2" opacity=".25"/><path d="M284 516 Q287 544 289 570" stroke-width="2.2" opacity=".22"/><path d="M232 508 Q272 518 314 508" stroke-width=".8" opacity=".45"/></g>
+   <path d="M206 550 Q270 564 338 550 L338 562 q-9 6 -18 3 q-10 5 -20 2 q-10 5 -21 2 q-10 4 -21 1 q-10 4 -20 0 q-10 2 -18 -3 q-8 0 -14 -5 Z" fill="#FFE9C0" opacity=".42"/>`)}
+ ${Z(1,`<!-- 前景：旅館外牆與玻璃門（你站在門外往裡看） -->
+   <g data-part="door"><path d="M-60 -60 H460 V820 H-60 Z M58 190 V820 H342 V190 Z" fill="url(#lbFac)" fill-rule="evenodd"/>
+   <path d="M-60 430 H58 V820 H-60 Z M342 430 H460 V820 H342 Z" fill="url(#lbTile)" opacity=".8"/><path d="M-60 430 H58 M342 430 H460" stroke="#6A5A40" stroke-width="1.2"/>
+   <g fill="none" stroke="#5A4A30" stroke-linecap="round">${streaks}</g>
+   <path d="M-60 -60 H460 V160 H-60 Z" fill="#3A2E1E" opacity=".25"/>
+   <!-- 撕掉公告以後留下的膠痕、門牌 -->
+   <g><rect x="12" y="250" width="34" height="46" fill="#E9DCB8" opacity=".5"/><rect x="8" y="318" width="40" height="30" fill="#8A7A5A" opacity=".3"/><rect x="18" y="366" width="26" height="36" fill="#F2E6C4" opacity=".4"/>
+     <g fill="#C9BC94" opacity=".7"><rect x="10" y="248" width="8" height="4" transform="rotate(-20 14 250)"/><rect x="40" y="292" width="8" height="4" transform="rotate(30 44 294)"/><rect x="42" y="316" width="8" height="4" transform="rotate(14 46 318)"/></g>
+     <path d="M20 372 l18 3 M21 380 l14 2" stroke="#8A7A5A" stroke-width=".6" opacity=".6"/></g>
+   <g><rect x="356" y="256" width="34" height="20" rx="1.4" fill="#2E6A5A"/><rect x="357" y="257" width="32" height="18" rx="1" fill="none" stroke="#E4EAE0" stroke-width=".6" opacity=".8"/>
+     <text x="373" y="264.6" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="5" text-anchor="middle" fill="#E4EAE0">海濱路</text><text x="373" y="272.6" font-family="Georgia,serif" font-size="7" text-anchor="middle" fill="#F2F5EC">17</text>
+     <path d="M358 276 q2 8 0 16" stroke="#6A4A30" stroke-width="1.6" opacity=".35" fill="none"/>
+     <rect x="360" y="330" width="22" height="34" rx="2" fill="#8A8672"/><rect x="362.4" y="333" width="17.2" height="12" rx="1" fill="#3A3A32"/><circle cx="371" cy="354.6" r="3.6" fill="#5A5648" stroke="#B8B4A0" stroke-width=".6"/><path d="M360.6 362 V332 Q360.6 330.6 362 330.6" fill="none" stroke="#D9D4BC" stroke-width=".6"/></g>
+   <!-- 門楣的招牌與一排很多年沒亮過的小燈泡 -->
+   <rect x="50" y="132" width="300" height="12" fill="#4A4436"/><rect x="50" y="132" width="300" height="1.4" fill="#A89C7E"/><rect x="50" y="143" width="300" height="2" fill="#1A160E" opacity=".7"/>
+   <g data-part="bulbs"><g class="flick">${Array.from({length:12},(_,i)=>i===7?`<circle cx="${76+i*22.5}" cy="140" r="2" fill="#1A160E"/>`:`<rect x="${74.6+i*22.5}" y="134" width="2.8" height="3" fill="#8A7A52"/><circle cx="${76+i*22.5}" cy="141.4" r="4" fill="url(#lbBulb)" opacity="${i%4===2?.6:.95}"/><path d="M${74+i*22.5} 139.6 q1.6 -1.6 3.4 -.8" fill="none" stroke="#FFF" stroke-width=".7" opacity=".7"/>`).join('')}</g></g>
+   <rect x="56" y="150" width="288" height="40" fill="#1E2A30"/><rect x="60" y="154" width="280" height="32" fill="url(#lbSign)"/>
+   <path d="M60 186 V154 H340" fill="none" stroke="#A8C0CC" stroke-width=".8" opacity=".7"/>
+   <text x="200" y="177" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="19" letter-spacing="14" text-anchor="middle" fill="#EEF2EC" opacity=".88">碧海行館</text>
+   <g fill="#3E5A6C"><rect x="150" y="166" width="5" height="2"/><rect x="232" y="172" width="6" height="1.6"/><rect x="118" y="174" width="3" height="3"/></g>
+   <path d="M330 186 l10 0 l0 -7 q-5 1 -7 3.4 q-2 1.6 -3 3.6 Z" fill="#7A6A4E"/><path d="M90 154 q3 16 0 32 M276 154 q-2 14 1 32" stroke="#6A4A30" stroke-width="2" opacity=".28" fill="none"/>
+   <path d="M56 190 H344 L340 200 H60 Z" fill="#000" opacity=".35"/>
+   <!-- 門框 -->
+   <path d="M52 820 V184 H348 V820 h-6 V190 H58 V820 Z" fill="url(#lbFrame)"/><path d="M52.6 820 V184.6 H348" fill="none" stroke="#9DB4A6" stroke-width=".8" opacity=".7"/>
+   <!-- 玻璃門：整片可以推開 -->
+   <g class="m-door"><rect x="58" y="190" width="284" height="640" fill="#0A1317" opacity=".34"/>
+     <rect x="58" y="190" width="284" height="640" fill="url(#lbGlass)"/>
+     <path d="M76 204 l70 0 l-70 270 Z" fill="#FFF" opacity=".08"/><path d="M184 196 l40 0 l-104 380 l-26 0 Z" fill="#FFF" opacity=".045"/><path d="M300 196 l22 0 l-70 250 l-12 0 Z" fill="#FFF" opacity=".04"/>
+     <path d="M58 190 H342 V250 Q250 262 200 256 Q120 248 58 262 Z" fill="#E9D6AE" opacity=".1"/>
+     <rect x="58" y="190" width="284" height="640" fill="none" stroke="#3E5248" stroke-width="12"/>
+     <path d="M64.6 824 V196.6 H335.4" fill="none" stroke="#8FA69A" stroke-width=".8" opacity=".8"/><path d="M70 824 V202 H330 V824" fill="none" stroke="#1A2622" stroke-width="1"/>
+     <g opacity=".5" fill="#D9CDA8"><rect x="286" y="286" width="26" height="34" opacity=".35"/><rect x="284" y="284" width="7" height="3.4" transform="rotate(-24 287 286)"/><rect x="306" y="316" width="7" height="3.4" transform="rotate(20 309 318)"/><rect x="96" y="250" width="30" height="22" opacity=".25"/></g>
+     <!-- 舊式金屬把手 -->
+     <g data-part="handle"><rect x="72" y="398" width="15" height="54" rx="2" fill="#000" opacity=".4"/><rect x="70" y="396" width="15" height="54" rx="2" fill="url(#lbBrass)"/><rect x="71" y="397" width="13" height="52" rx="1.4" fill="none" stroke="#4A3518" stroke-width=".5"/>
+       <circle cx="77.5" cy="401.6" r="1.2" fill="#4A3518"/><circle cx="77.5" cy="444.4" r="1.2" fill="#4A3518"/><ellipse cx="77.5" cy="436" rx="1.8" ry="2.6" fill="#1A120A"/>
+       <g class="turn"><circle cx="77.5" cy="418" r="6.4" fill="url(#lbBrass)" stroke="#4A3518" stroke-width=".6"/><path d="M77.5 415 h26 q4 0 4 3.4 q0 3.4 -4 3.4 h-26 Z" fill="url(#lbBrass)" stroke="#4A3518" stroke-width=".5"/><path d="M80 416.4 h23" stroke="#FFF6D8" stroke-width=".9" opacity=".8" stroke-linecap="round"/></g></g>
+     <!-- 泛黃的公告 -->
+     <g data-part="notice"><path d="M217 293 h54 v74 h-54 Z" fill="#000" opacity=".3"/>
+       <path d="M214 290 H268 V356 Q262 358 259 364 H214 Z" fill="#DCCB9E"/><path d="M268 356 Q262 358 259 364 Q264 357 268 356 Z" fill="#A8966A"/><path d="M259 364 L268 356 L268 364 Z" fill="#000" opacity=".25"/>
+       <path d="M214 290 H268 V300 H214 Z" fill="#B8A678" opacity=".35"/><path d="M220 350 q20 6 44 -2" stroke="#A8966A" stroke-width=".6" fill="none" opacity=".7"/>
+       <rect x="226" y="285.6" width="15" height="7.4" fill="#F2ECD8" opacity=".6" transform="rotate(-3 233 289)"/><rect x="246" y="358" width="13" height="6.6" fill="#F2ECD8" opacity=".5" transform="rotate(4 252 361)"/>
+       ${'本館暫停營業'.split('').map((c,i)=>`<text x="241" y="${305+i*10.2}" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="9.4" text-anchor="middle" fill="#3A2C1C">${c}</text>`).join('')}</g></g></g>`)}
+`)},
 
-corridor:()=>{const yl=(x,ye)=>(349+(ye-349)*(200-x)/60).toFixed(1), yr=(x,ye)=>(349+(ye-349)*(x-200)/60).toFixed(1);
- const doorL=(a,b)=>`<path d="M${a} ${yl(a,262)} L${b} ${yl(b,262)} L${b} ${yl(b,502)} L${a} ${yl(a,502)} Z" fill="#130E0B" stroke="#33251B" stroke-width="1.4"/>
-   <path d="M${a-3} ${yl(a-3,290)} L${b+4} ${yl(b+4,290)} L${b+4} ${yl(b+4,480)} L${a-3} ${yl(a-3,480)} Z" fill="none" stroke="#221810" stroke-width="1"/>
-   <circle cx="${a-5}" cy="${yl(a-5,392)}" r="${(200-a)/60*1.3}" fill="#8A6B3F"/>`;
- const doorR=(a,b)=>`<path d="M${a} ${yr(a,262)} L${b} ${yr(b,262)} L${b} ${yr(b,502)} L${a} ${yr(a,502)} Z" fill="#100C09" stroke="#2C2018" stroke-width="1.4"/>
-   <path d="M${a+3} ${yr(a+3,290)} L${b-4} ${yr(b-4,290)} L${b-4} ${yr(b-4,480)} L${a+3} ${yr(a+3,480)} Z" fill="none" stroke="#1D150F" stroke-width="1"/>
-   <circle cx="${a+5}" cy="${yr(a+5,392)}" r="${(a-200)/60*1.3}" fill="#8A6B3F"/>`;
+corridor:()=>{
+ /* 一點透視：消失點 (200,349)，走廊盡頭的牆是 x 140–260、y 196–502。Y(x,ye) = 盡頭牆上高度 ye 的那條線，延伸到 x 時的 y */
+ const Y=(x,ye)=>+(349+(ye-349)*Math.abs(200-x)/60).toFixed(1);
+ const Q=(a,b,y1,y2)=>`M${a} ${Y(a,y1)} L${b} ${Y(b,y1)} L${b} ${Y(b,y2)} L${a} ${Y(a,y2)} Z`;
+ const sg=a=>a<200?-1:1;
+ /* 一扇房門：a = 靠窗那一邊、b = 靠鏡頭那一邊 */
+ const door=(a,b,n)=>{const d=sg(a),k=Math.abs(200-a)/60,i1=a+d*2.4,i2=b-d*3;
+   return `<path d="${Q(a-d*-1.6,b+d*2.4,256,502)}" fill="#5A4026"/>
+   <path d="${Q(a,b,262,502)}" fill="#1E130C"/>
+   <path d="${Q(i1,i2,276,372)}" fill="#2A1B11"/><path d="${Q(i1,i2,386,490)}" fill="#2A1B11"/>
+   <path d="${Q(i1,i2,276,372)} ${Q(i1,i2,386,490)}" fill="none" stroke="#0E0805" stroke-width=".9"/>
+   <path d="M${i1} ${Y(i1,372)} L${i2} ${Y(i2,372)} M${i1} ${Y(i1,490)} L${i2} ${Y(i2,490)}" stroke="#6A4A30" stroke-width=".7" opacity=".8"/>
+   <path d="${Q(b,b+d*-0+d*0,262,502)}" fill="none"/>
+   <path d="${Q(b,b-d*-2.6,262,502)}" fill="#E0A868" opacity=".8"/>
+   <path d="M${a} ${Y(a,262)} L${a} ${Y(a,502)}" stroke="#0A0604" stroke-width="${(1.2*k).toFixed(1)}" opacity=".8"/>
+   <path d="${Q(a,b,238,256)}" fill="#3A3424"/><path d="${Q(a+d*1.4,b-d*1.6,241,253)}" fill="#8A8056" opacity=".55"/>
+   <circle cx="${a+d*5}" cy="${Y(a+d*5,394)}" r="${(k*1.9).toFixed(1)}" fill="#6A4E26"/><circle cx="${a+d*5-.5*k}" cy="${Y(a+d*5,394)-.6*k}" r="${(k*.8).toFixed(1)}" fill="#FBE6B0"/>
+   <g transform="translate(${a+d*8} ${Y(a+d*8,249)})"><path d="M0 ${-3*k} h${-d*3*k}" stroke="#2A1C10" stroke-width="${(.9*k).toFixed(1)}"/>
+     <rect x="${d<0?0:-15*k}" y="${-4.4*k}" width="${15*k}" height="${8.4*k}" rx="${.8*k}" fill="#1A120C"/>
+     <rect x="${d<0?.8*k:-14.2*k}" y="${-3.6*k}" width="${13.4*k}" height="${6.8*k}" rx="${.6*k}" fill="#B8965A"/>
+     <text x="${-d*7.5*k}" y="${2.2*k}" font-family="Georgia,serif" font-size="${(5.4*k).toFixed(1)}" text-anchor="middle" fill="#2A1C10">${n}</text></g>`};
+ const r=RNG(77);
+ /* 暗紅色磨石子的石粒：愈靠近鏡頭愈大 */
+ const chips=Array.from({length:230},(_,i)=>{const t=r(),y=502+t*t*262,h=(y-349)*.392,x=200+(r()-.5)*2*h,z=.5+t*2.2;
+   return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(z*(.5+r()*.7)).toFixed(2)}" ry="${(z*.3).toFixed(2)}" fill="${['#E4C4B4','#2A0F0D','#B4847A','#8E4038','#F0DCC8'][i%5]}" opacity="${(.3+r()*.45).toFixed(2)}"/>`}).join('');
  return SVG('corridor',`
  <defs>
-  <linearGradient id="coWL" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#4C3C24"/><stop offset=".5" stop-color="#2C2216"/><stop offset="1" stop-color="#120E09"/></linearGradient>
-  <linearGradient id="coWR" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#463722"/><stop offset=".5" stop-color="#261D14"/><stop offset="1" stop-color="#100C08"/></linearGradient>
-  <linearGradient id="coGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFBEF"/><stop offset=".6" stop-color="#FFE9BE"/><stop offset="1" stop-color="#F7C987"/></linearGradient>
-  <linearGradient id="coFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5E2A22"/><stop offset="1" stop-color="#1A0C0A"/></linearGradient>
-  <linearGradient id="coRug" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7A3A2C"/><stop offset="1" stop-color="#2A1410"/></linearGradient>
+  <linearGradient id="coWL" x1="140" y1="0" x2="-40" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D2AE70"/><stop offset=".12" stop-color="#9A7C4C"/><stop offset=".45" stop-color="#5A4830"/><stop offset="1" stop-color="#1E170E"/></linearGradient>
+  <linearGradient id="coWR" x1="260" y1="0" x2="440" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#C9A468"/><stop offset=".12" stop-color="#8E7246"/><stop offset=".45" stop-color="#4E3E2A"/><stop offset="1" stop-color="#1A140C"/></linearGradient>
+  <linearGradient id="coDL" x1="140" y1="0" x2="-40" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8E9A72"/><stop offset=".15" stop-color="#5A684E"/><stop offset=".5" stop-color="#34402F"/><stop offset="1" stop-color="#121810"/></linearGradient>
+  <linearGradient id="coDR" x1="260" y1="0" x2="440" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#86926C"/><stop offset=".15" stop-color="#52604A"/><stop offset=".5" stop-color="#2E3A2A"/><stop offset="1" stop-color="#10160E"/></linearGradient>
+  <linearGradient id="coSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E4F0F2"/><stop offset=".5" stop-color="#FFFDF2"/><stop offset=".8" stop-color="#FFF0CC"/><stop offset="1" stop-color="#F6D49A"/></linearGradient>
+  <linearGradient id="coFloor" x1="0" y1="502" x2="0" y2="770" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9A4A3A"/><stop offset=".3" stop-color="#6A2A22"/><stop offset="1" stop-color="#220E0C"/></linearGradient>
+  <linearGradient id="coRefl" x1="0" y1="502" x2="0" y2="700" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFF0CC" stop-opacity=".6"/><stop offset=".3" stop-color="#FFD9A0" stop-opacity=".2"/><stop offset="1" stop-color="#FFD9A0" stop-opacity="0"/></linearGradient>
+  <radialGradient id="coBloom" cx="200" cy="330" r="210" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFF6DC" stop-opacity=".6"/><stop offset=".35" stop-color="#FFE2AE" stop-opacity=".3"/><stop offset="1" stop-color="#FFE2AE" stop-opacity="0"/></radialGradient>
+  <linearGradient id="coEnd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6A5636"/><stop offset=".6" stop-color="#8A7044"/><stop offset="1" stop-color="#5A482C"/></linearGradient>
+  <linearGradient id="coPost" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0A0604"/><stop offset=".7" stop-color="#2A1A10"/><stop offset="1" stop-color="#8A5E38"/></linearGradient>
+  <clipPath id="coWinC"><rect x="156" y="226" width="88" height="204"/></clipPath>
  </defs>
  ${BG('#0C0907')}
  ${Z(.25,`
-   <path d="M-40 ${yl(-40,196)} L140 196 L260 196 L440 ${yr(440,196)} Z" fill="#17110D"/>
-   <path d="M-40 ${yl(-40,196)} L140 196 L140 502 L-40 ${yl(-40,502)} Z" fill="url(#coWL)"/>
-   <path d="M440 ${yr(440,196)} L260 196 L260 502 L440 ${yr(440,502)} Z" fill="url(#coWR)"/>
-   <path d="M140 502 L260 502 L440 ${yr(440,502)} L-40 ${yl(-40,502)} Z" fill="url(#coFloor)"/>
-   <g opacity=".4">${Array.from({length:140},(_,i)=>{const t=((i*37)%100)/100,y=502+t*t*258,h=60+(y-502)*.698,x=200+(((i*53)%100)/100-.5)*2*h;return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(.4+t*1.5).toFixed(2)}" fill="${i%3?'#C9A89A':'#2A1410'}"/>`}).join('')}</g>
-   <g stroke="#3D2B1E" stroke-width="1.2" fill="none"><path d="M140 430 L-40 ${yl(-40,430)}"/><path d="M260 430 L440 ${yr(440,430)}"/>
-     <path d="M140 236 L-40 ${yl(-40,236)}" opacity=".6"/><path d="M260 236 L440 ${yr(440,236)}" opacity=".6"/></g>
-   <path d="M140 430 L-40 ${yl(-40,430)} L-40 ${yl(-40,502)} L140 502 Z" fill="#000" opacity=".28"/>
-   <path d="M260 430 L440 ${yr(440,430)} L440 ${yr(440,502)} L260 502 Z" fill="#000" opacity=".3"/>
-   ${doorL(128,112)}${doorL(92,52)}${doorR(272,288)}${doorR(308,348)}
-   <rect x="140" y="196" width="120" height="306" fill="#35271C"/>
-   <rect x="150" y="220" width="100" height="216" fill="#241A12"/>
-   <rect x="156" y="226" width="88" height="204" fill="url(#coGlass)"/>
-   <path d="M200 226 V430 M156 318 H244" stroke="#241A12" stroke-width="3.6"/>
-   <rect x="146" y="434" width="108" height="6" fill="#4A3626"/>
-   <rect x="120" y="190" width="160" height="290" fill="#FFE2AE" opacity=".3" filter="url(#soft)"/>
-   <rect class="glow" x="100" y="170" width="200" height="330" fill="#FFF0D2" opacity=".5" filter="url(#soft)"/>
+   <!-- 天花板、兩側的牆（上半泛黃的白牆，下半刷成綠色的牆裙）、暗紅色磨石子地 -->
+   <path d="M-40 ${Y(-40,196)} L140 196 L260 196 L440 ${Y(440,196)} Z" fill="#3A2E1E"/>
+   <path d="M150 196 L250 196 L${200+50*4} ${Y(440,196)} L${200-50*4} ${Y(-40,196)} Z" fill="#FFE2AE" opacity=".1"/>
+   <path d="${Q(140,-40,196,502)}" fill="url(#coWL)"/><path d="${Q(260,440,196,502)}" fill="url(#coWR)"/>
+   <path d="${Q(140,-40,424,502)}" fill="url(#coDL)"/><path d="${Q(260,440,424,502)}" fill="url(#coDR)"/>
+   <g fill="none" stroke-width="1"><path d="M140 424 L-40 ${Y(-40,424)}" stroke="#D9D2A6" opacity=".45"/><path d="M260 424 L440 ${Y(440,424)}" stroke="#D9D2A6" opacity=".4"/>
+     <path d="M140 216 L-40 ${Y(-40,216)}" stroke="#2A2014" opacity=".8"/><path d="M260 216 L440 ${Y(440,216)}" stroke="#2A2014" opacity=".8"/>
+     <path d="M140 496 L-40 ${Y(-40,496)}" stroke="#1A120C" stroke-width="2.4" opacity=".7"/><path d="M260 496 L440 ${Y(440,496)}" stroke="#1A120C" stroke-width="2.4" opacity=".7"/></g>
+   <g fill="#2A2014" opacity=".16"><path d="M96 ${Y(96,300)} q-6 30 -1 70 q-8 -10 -9 -40 Z"/><path d="M300 ${Y(300,280)} q8 30 2 80 q10 -20 8 -60 Z"/><path d="M20 ${Y(20,330)} q-10 20 -4 60 q-14 -16 -8 -50 Z"/></g>
+   <path d="M140 502 L260 502 L440 ${Y(440,502)} L-40 ${Y(-40,502)} Z" fill="url(#coFloor)"/>
+   ${chips}
+   <g stroke="#C99A4E" stroke-width=".8" opacity=".4" fill="none">${[-1,0,1].map(k=>`<path d="M${200+k*40} 502 L${200+k*40*4} ${Y(440,502)}"/>`).join('')}
+     ${[1.25,1.6,2.1,2.8,3.7].map(k=>`<path d="M${200-60*k} ${Y(200-60*k,502)} H${200+60*k}"/>`).join('')}</g>
+   <!-- 房門：遠的那兩扇門上方有伸出來的小房號牌 -->
+   ${door(128,112,203)}${door(92,52,201)}${door(272,288,204)}${door(308,348,202)}
+   <!-- 走廊盡頭：窗 -->
+   <rect x="140" y="196" width="120" height="306" fill="url(#coEnd)"/>
+   <rect x="140" y="424" width="120" height="78" fill="#6E7A58"/><path d="M140 424 H260" stroke="#E4DCB0" stroke-width="1" opacity=".5"/><rect x="140" y="494" width="120" height="8" fill="#2A2014"/>
+   <rect x="148" y="218" width="104" height="222" fill="#3E3020"/><rect x="150" y="220" width="100" height="216" fill="#D9CDA8"/>
+   <path d="M150 436 V220 H250" fill="none" stroke="#FFF8E0" stroke-width=".8" opacity=".8"/>
+   <rect x="156" y="226" width="88" height="204" fill="url(#coSky)"/>
+   <g clip-path="url(#coWinC)"><path d="M156 392 q24 -5 50 -2 q20 -4 38 0 V430 H156 Z" fill="#C9DCD8" opacity=".7"/><path d="M156 398 H244" stroke="#FFF" stroke-width="1" opacity=".8"/>
+     <path d="M156 430 V404 l12 -4 l14 5 v6 h18 v-8 h16 v8 h10 l10 -5 l8 4 V430 Z" fill="#B8A88A" opacity=".55"/>
+     <path d="M222 400 V380 M218 383 h8 M219 386 h6" stroke="#A89878" stroke-width=".7" opacity=".7"/></g>
+   <path d="M200 226 V430 M156 318 H244" stroke="#C9BC94" stroke-width="4"/><path d="M198.6 226 V430 M156 316.6 H244" stroke="#FFF8E0" stroke-width=".7" opacity=".8"/>
+   <rect x="156" y="226" width="88" height="204" fill="none" stroke="#B8AA84" stroke-width="2"/>
+   <rect x="144" y="436" width="112" height="7" fill="#D9CDA8"/><rect x="144" y="436" width="112" height="1.4" fill="#FFFBEA"/><rect x="146" y="443" width="108" height="3" fill="#3E3020" opacity=".6"/>
+   <!-- 盆栽（逆光） -->
+   <g><path d="M243 500 l1.6 -18 h13 l1.6 18 Z" fill="#6A3E2A"/><path d="M244.6 482 h13" stroke="#E0A868" stroke-width="1"/>
+     <g fill="#2E3E2A"><path d="M248 482 q-4 -22 -1 -40 q4 18 4 40 Z"/><path d="M251 482 q0 -28 5 -46 q2 24 -2 46 Z"/><path d="M254 482 q4 -16 9 -28 q0 16 -6 28 Z"/><path d="M247 482 q-6 -12 -8 -24 q6 8 10 24 Z"/></g>
+     <g fill="none" stroke="#C9D29A" stroke-width=".6" opacity=".7"><path d="M247 442 q-3 18 1 40"/><path d="M256 436 q-5 18 -5 46"/></g></g>
+   <!-- 光暈、牆上的反光 -->
+   <rect x="-40" y="100" width="480" height="560" fill="url(#coBloom)"/>
+   <rect class="glow" x="-40" y="100" width="480" height="560" fill="url(#coBloom)"/>
    ${SHEER(152,222,58,214,5,26)}${SHEER(228,222,20,214,2,-7)}
-   <path d="M158 502 L242 502 L${200+42*4} ${yr(440,502)} L${200-42*4} ${yl(-40,502)} Z" fill="#FFD9A0" opacity=".2"/>
-   <path d="M168 502 L232 502 L${200+26*4} ${yr(440,502)} L${200-26*4} ${yl(-40,502)} Z" fill="#FFE7BD" opacity=".14"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" values=".08;.2;.08"/></path>
-   <path d="M198 502 L202 502 L212 ${yr(440,502)} L188 ${yl(-40,502)} Z" fill="#1A100A" opacity=".5"/>
-   <path d="M150 548 L250 548 L262 572 L138 572 Z" fill="#1A100A" opacity=".35"/>
-   <path class="glow" d="M150 502 L250 502 L${200+60*4} ${yr(440,502)} L${200-60*4} ${yl(-40,502)} Z" fill="#FFE9C0" opacity=".2"/>
-   <path d="M140 196 L140 502" stroke="#F7C987" stroke-width="1" opacity=".3"/><path d="M260 196 L260 502" stroke="#F7C987" stroke-width="1" opacity=".3"/>
+   <!-- 地上的窗光與窗框的影子 -->
+   <path d="M150 502 L250 502 L${200+50*4} ${Y(440,502)} L${200-50*4} ${Y(-40,502)} Z" fill="url(#coRefl)"/>
+   <path d="M166 502 L234 502 L${200+34*2.6} ${Y(200+60*2.6,502)} L${200-34*2.6} ${Y(200-60*2.6,502)} Z" fill="#FFF3D6" opacity=".14"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" values=".08;.2;.1;.08"/></path>
+   <path d="M198.6 502 L201.4 502 L${200+1.4*2.6} ${Y(200+60*2.6,502)} L${200-1.4*2.6} ${Y(200-60*2.6,502)} Z" fill="#3A1410" opacity=".5"/>
+   <path d="M${200-34*1.7} ${Y(200-60*1.7,502)} H${200+34*1.7} L${200+34*1.82} ${Y(200+60*1.82,502)} H${200-34*1.82} Z" fill="#3A1410" opacity=".4"/>
+   <path class="glow" d="M150 502 L250 502 L${200+60*4} ${Y(440,502)} L${200-60*4} ${Y(-40,502)} Z" fill="#FFE9C0" fill-opacity=".2"/>
+   <path d="M140 196 V502" stroke="#FFE2AE" stroke-width="1.2" opacity=".5"/><path d="M260 196 V502" stroke="#FFE2AE" stroke-width="1.2" opacity=".5"/>
  `)}
- ${Z(1,`<g fill="#060403" opacity=".9"><rect x="-40" y="100" width="56" height="700"/><rect x="384" y="100" width="56" height="700"/></g>
-   <path d="M16 100 V800 M384 100 V800" stroke="#3A2A1E" stroke-width="1" opacity=".7"/>`)}
  ${Z(.6,`<g class="m-boxes">${BOXES(40,520,.9,'202')}</g>`)}
+ ${Z(1,`<!-- 最前面：樓梯口的扶手柱（左）、牆角（右） -->
+   <path d="M384 100 H440 V800 H384 Z" fill="#070504"/><path d="M384 100 V800" stroke="#B8845A" stroke-width="1.2" opacity=".6"/><path d="M386.4 100 V800" stroke="#3A2A1E" stroke-width="2" opacity=".7"/>
+   <rect x="398" y="356" width="14" height="22" rx="2" fill="#2A241A"/><rect x="402.6" y="361" width="4.8" height="12" rx="1" fill="#4A4232"/><path d="M398.6 377 V358 Q398.6 356.6 400 356.6" fill="none" stroke="#8A7A58" stroke-width=".6"/>
+   <g><path d="M-40 520 L-40 492 Q-10 470 12 452 L22 462 Q4 490 -6 520 Z" fill="#0A0604"/><path d="M-40 492 Q-10 470 12 452" fill="none" stroke="#B8845A" stroke-width="1.4" opacity=".7"/>
+     <rect x="6" y="448" width="34" height="360" fill="url(#coPost)"/><path d="M39.4 448 V800" stroke="#F0C48A" stroke-width="1" opacity=".75"/>
+     <path d="M2 448 h42 v-10 h-42 Z" fill="#1E120A"/><path d="M2 438 h42" stroke="#E0A868" stroke-width="1" opacity=".7"/><path d="M44 438 v10" stroke="#F0C48A" stroke-width="1" opacity=".7"/>
+     <path d="M8 438 Q8 424 23 420 Q38 424 38 438 Z" fill="#241610"/><circle cx="23" cy="412" r="11" fill="#1E120A"/>
+     <path d="M30.6 404 A11 11 0 0 1 33.6 416" fill="none" stroke="#F0C48A" stroke-width="1.6" opacity=".8" stroke-linecap="round"/><path d="M36 426 Q38 432 38 438" fill="none" stroke="#E0A868" stroke-width="1" opacity=".7"/>
+     <rect x="12" y="470" width="22" height="120" fill="none" stroke="#050302" stroke-width="1.4" opacity=".8"/><path d="M34 470 V590" stroke="#8A5E38" stroke-width=".7" opacity=".6"/></g>`)}
 `)},
 
-door:()=>SVG('door',`
+door:()=>{
+ const sc=RNG(2031);
+ /* 拿著房卡的手（你的右手）：從左下角伸進畫面。門前和舉到感應區時用同一隻手 */
+ const HAND=`<g transform="rotate(-14 110 600)">
+   <path d="M22.3 657.3 L57.7 686.7 L-198 995 L-234 965 Z" fill="url(#drSleeve)"/><path d="M4 700 q14 6 22 20 M-30 742 q16 4 26 18 M14 676 q14 4 24 14" fill="none" stroke="#0E1114" stroke-width="1.2" opacity=".5"/>
+   <path d="M22.3 657.3 L-234 965" stroke="#4A525A" stroke-width="1.2" opacity=".8"/><path d="M40 672 L-210 978" stroke="#12161A" stroke-width="1" opacity=".6"/>
+   <path d="M25 659.6 L55 684.4 L60.6 677 L31 652.6 Z" fill="#D9D3C4"/><path d="M31 652.6 L60.6 677" stroke="#8E8A80" stroke-width=".8"/><path d="M27 657.6 L33 650.8" stroke="#FFF8E6" stroke-width="1" opacity=".8"/>
+   <circle cx="50.6" cy="675.6" r="1.5" fill="#B9B2A0" stroke="#7A766C" stroke-width=".4"/>
+   <path d="M30 654 C36 640 50 628 64 620 L92 612 L124 617 C131 620 132.6 629 127 634.6 L98 640.6 C93 653 82 665 60 678 Z" fill="url(#drSkin)"/>
+   <path d="M70 645 C80 637 98 636.6 105 644 C105 653 91 661 74 661 Z" fill="#8E6A50" opacity=".75"/>
+   <path d="M76 652 q10 -8 24 -6 M86 638 q14 -3 34 -1.6" fill="none" stroke="#6E4E3A" stroke-width=".7" opacity=".6"/>
+   <path d="M118 618.6 C126 620 129.6 626 126.4 631.6" fill="none" stroke="#F2D2AE" stroke-width="1" opacity=".7"/>
+   <path d="M30 654 C36 640 50 628 64 620" fill="none" stroke="#F0CDA6" stroke-width="1.1" opacity=".8"/>
+   <!-- 房卡：霧白的厚塑膠，深藍褪成灰黑，四個角磨白 -->
+   <rect x="78.4" y="575" width="74" height="46" rx="4" fill="#000" opacity=".4"/>
+   <rect x="76" y="572" width="74" height="46" rx="4" fill="url(#drCard)"/>
+   <rect x="76" y="572" width="74" height="46" rx="4" fill="#E9EEF0" opacity=".1"/>
+   <path d="M76 576 Q76 572 80 572 h7 l-11 10 Z M150 576 Q150 572 146 572 h-8 l12 11 Z M76 614 Q76 618 80 618 h6 l-10 -9 Z M150 614 Q150 618 146 618 h-9 l13 -11 Z" fill="#DCE2E4" opacity=".5"/>
+   <rect x="76.4" y="572.4" width="73.2" height="45.2" rx="3.6" fill="none" stroke="#C9D2D6" stroke-width=".7" opacity=".55"/>
+   <path d="M78 616.6 H148" stroke="#0B0F12" stroke-width="1.2" opacity=".6"/>
+   <text x="113" y="591.6" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="9.4" letter-spacing="2.4" text-anchor="middle" fill="#E6ECEE" opacity=".9">碧海行館</text>
+   <path d="M92 596 H134" stroke="#C9D2D6" stroke-width=".5" opacity=".6"/>
+   <text x="113" y="610" font-family="Georgia,serif" font-size="12" letter-spacing="1.6" text-anchor="middle" fill="#F2F5F6">203</text>
+   <g stroke="#E9EEF0" stroke-linecap="round" opacity=".35" fill="none"><path d="M84 580 l22 5" stroke-width=".4"/><path d="M120 612 l24 -7" stroke-width=".4"/><path d="M98 601 l10 6" stroke-width=".3"/><path d="M130 578 l12 9" stroke-width=".3"/></g>
+   <path d="M96 572 h14 l-22 46 h-12 Z" fill="#FFF" opacity=".07"/>
+   <!-- 大拇指壓在卡片上 -->
+   <path d="M54 643 C56 628 69 613 83 602.6 C89.6 598 98.6 600.4 99.6 607 C100.4 613 94.6 619 88.6 625 C80.6 634.6 75 647 67 657 C60.6 664 51.6 656 54 643 Z" fill="#000" opacity=".3" transform="translate(2.4 2.6)"/>
+   <path d="M52 640 C54 626 68 611.6 82 601 C88.6 596.4 97.6 598.6 98.8 605.4 C99.6 611.4 93.6 617.4 87.6 623.6 C79.6 633 74 645.6 66 655.6 C59.6 662.6 49.6 654 52 640 Z" fill="url(#drSkin)"/>
+   <path d="M52 640 C54 626 68 611.6 82 601 C86 598.4 90.6 598 94 599.6" fill="none" stroke="#F6D8B4" stroke-width="1.1" opacity=".85"/>
+   <path d="M84.6 603.4 C88.6 600.4 94.6 601 96.4 605 C97.4 608.6 94.6 612.4 91 615.4 C88.6 611 86 607 84.6 603.4 Z" fill="#EBCDB6"/><path d="M86.6 604 C89.6 602 93.4 602.4 95 604.6" fill="none" stroke="#FFF3E6" stroke-width=".7" opacity=".7"/>
+   <path d="M72 626 q5 2.4 8 6 M69.6 630 q4 2 6.6 5.4 M60 648 q5 1 8 4" fill="none" stroke="#7A563E" stroke-width=".6" opacity=".6"/>
+ </g>`;
+ return SVG('door',`
  <defs>
-  <radialGradient id="drKnob" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#F0D69A"/><stop offset=".45" stop-color="#A8854C"/><stop offset="1" stop-color="#4A3518"/></radialGradient>
+  <radialGradient id="drKnob" cx=".34" cy=".3" r=".85"><stop offset="0" stop-color="#FBE6B0"/><stop offset=".35" stop-color="#B8925A"/><stop offset=".8" stop-color="#5E4220"/><stop offset="1" stop-color="#8A6A3A"/></radialGradient>
+  <linearGradient id="drSlab" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6A4830"/><stop offset=".3" stop-color="#4E3423"/><stop offset=".75" stop-color="#38261A"/><stop offset="1" stop-color="#2A1C13"/></linearGradient>
+  <linearGradient id="drPanel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3E2A1C"/><stop offset=".6" stop-color="#4A3222"/><stop offset="1" stop-color="#5A3E2A"/></linearGradient>
+  <linearGradient id="drFrame" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5E422C"/><stop offset=".5" stop-color="#2E1F15"/><stop offset="1" stop-color="#1A110B"/></linearGradient>
+  <linearGradient id="drPlate" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EAD49A"/><stop offset=".35" stop-color="#B8965A"/><stop offset=".7" stop-color="#8A6A3A"/><stop offset="1" stop-color="#C4A468"/></linearGradient>
+  <linearGradient id="drWallG" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8A7650"/><stop offset=".12" stop-color="#6A5A3E"/><stop offset=".9" stop-color="#3E3526"/><stop offset="1" stop-color="#2E281E"/></linearGradient>
+  <radialGradient id="drWear"><stop offset="0" stop-color="#E0AE7C" stop-opacity=".22"/><stop offset=".6" stop-color="#C9905A" stop-opacity=".08"/><stop offset="1" stop-color="#C9905A" stop-opacity="0"/></radialGradient>
+  <linearGradient id="drSleeve" x1="22" y1="657" x2="58" y2="687" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3E4852"/><stop offset=".35" stop-color="#252B32"/><stop offset="1" stop-color="#14181C"/></linearGradient>
+  <linearGradient id="drSkin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E2BC98"/><stop offset=".5" stop-color="#C49A78"/><stop offset="1" stop-color="#96705A"/></linearGradient>
+  <linearGradient id="drCard" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#55687A"/><stop offset=".5" stop-color="#34424E"/><stop offset="1" stop-color="#23292F"/></linearGradient>
+  <linearGradient id="drGapL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE2A8" stop-opacity=".7"/><stop offset="1" stop-color="#FFE2A8" stop-opacity="0"/></linearGradient>
+  <linearGradient id="drShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".34"/><stop offset=".3" stop-color="#000" stop-opacity="0"/><stop offset=".8" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".4"/></linearGradient>
+  ${TERRAZZO('drTz','#4A1E1A',['#D9B8A8','#8A4A40','#2A0F0D','#C9A08E','#6E2E28'],40,40,23,'matrix(1 0 0 .45 0 0)')}
  </defs>
- <rect x="-40" y="-40" width="480" height="800" fill="url(#drWall)"/>
- ${Z(.3,`<rect x="-40" y="622" width="480" height="30" fill="#120C08"/><rect x="-40" y="622" width="480" height="1.4" fill="#33251B"/>
-   <rect x="-40" y="652" width="480" height="120" fill="#0E0906"/>
-   <rect x="28" y="34" width="344" height="620" fill="#170F0A"/><path d="M28 654 V34 H372" fill="none" stroke="#3A2A1E" stroke-width="1"/>`)}
+ <!-- 遠景：泛黃的牆、牆裙、地板 -->
+ <rect x="-40" y="-40" width="480" height="800" fill="url(#drWallG)"/>
+ <path d="M-40 520 H440 V640 H-40 Z" fill="#26342C" opacity=".85"/><path d="M-40 520 H440" stroke="#8A8A62" stroke-width="1" opacity=".5"/>
+ <g fill="none" stroke="#2A2418" stroke-width=".6" opacity=".6"><path d="M8 250 q4 30 -2 60 q-3 20 4 44"/><path d="M392 300 q-5 24 2 50"/></g>
+ <path d="M-40 240 L28 240 L28 640 L-40 640 Z" fill="#FFE2A8" opacity=".1"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" values=".06;.16;.09;.06"/></path>
+ ${Z(.3,`<rect x="-40" y="626" width="480" height="26" fill="#1A120C"/><rect x="-40" y="626" width="480" height="1.4" fill="#5E4630" opacity=".8"/>
+   <rect x="-40" y="652" width="480" height="140" fill="url(#drTz)"/><rect x="-40" y="652" width="480" height="140" fill="#000" opacity=".45"/>
+   <path d="M-40 668 H440 M-40 700 H440" stroke="#B48A4A" stroke-width=".7" opacity=".35"/>
+   <!-- 門框 -->
+   <rect x="26" y="34" width="348" height="620" fill="#0D0806"/>
+   <rect x="28" y="34" width="18" height="620" fill="url(#drFrame)"/><rect x="354" y="34" width="18" height="620" fill="#1E140D"/>
+   <path d="M28.6 34 V654" stroke="#A8825A" stroke-width="1" opacity=".8"/><path d="M36 34 V654" stroke="#140C08" stroke-width="1.4" opacity=".7"/><path d="M362 34 V654 M371.4 34 V654" stroke="#4A3526" stroke-width=".8" opacity=".7"/>
+   ${GRAINV(28,240,18,410,4,3,'#140C08',.5,.5)}`)}
  ${Z(.4,`
-   <rect x="46" y="52" width="308" height="594" fill="url(#drWood)"/>
-   <g fill="none" stroke="#1E140D" stroke-width=".7" opacity=".7">${[62,84,110,150,186,214,250,282,318,340].map((x,i)=>`<path d="M${x} 52 q${i%2?5:-5} 150 0 300 t0 294"/>`).join('')}</g>
-   ${[[76,92,248,220],[76,392,248,220]].map(([x,y,w,h])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#000" opacity=".16"/>
-     <path d="M${x} ${y+h} V${y} H${x+w}" fill="none" stroke="#140D08" stroke-width="2.6"/><path d="M${x} ${y+h} H${x+w} V${y}" fill="none" stroke="#5A4230" stroke-width="1.2"/>
-     <rect x="${x+12}" y="${y+12}" width="${w-24}" height="${h-24}" fill="none" stroke="#1E140D" stroke-width="1.4"/>
-     <path d="M${x+12} ${y+h-12} H${x+w-12} V${y+12}" fill="none" stroke="#4A3526" stroke-width=".8"/>`).join('')}
-   <g fill="#6B5230"><rect x="42" y="120" width="8" height="26" rx="1"/><rect x="42" y="540" width="8" height="26" rx="1"/></g>
-   <g data-part="num"><rect x="165" y="330" width="74" height="40" rx="3" fill="#000" opacity=".35"/>
-     <rect x="162" y="326" width="76" height="40" rx="3" fill="url(#drBrass)"/><rect x="165" y="329" width="70" height="34" rx="2" fill="none" stroke="#5E4522" stroke-width=".8"/>
+   <!-- 門板 -->
+   <rect x="46" y="52" width="308" height="594" fill="url(#drSlab)"/>
+   ${GRAINV(48,236,26,410,5,41,'#1A100A',.55,.6)}${GRAINV(326,236,26,410,5,43,'#120A06',.55,.6)}${GRAINV(50,236,300,410,10,47,'#C9905A',.1,.5)}
+   ${GRAIN(76,316,248,72,9,51,'#1A100A',.5,.6)}${GRAIN(76,614,248,30,5,53,'#1A100A',.5,.6)}
+   <path d="M76 312 H324 M76 392 H324 M76 612 H324" stroke="#1A100A" stroke-width=".8" opacity=".6"/>
+   ${[[76,92,248,220],[76,392,248,220]].map(([x,y,w,h],k)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#1E130C"/>
+     <path d="M${x} ${y} H${x+w} L${x+w-13} ${y+13} H${x+13} Z" fill="#150D08"/><path d="M${x} ${y} L${x+13} ${y+13} V${y+h-13} L${x} ${y+h} Z" fill="#1A1009"/>
+     <path d="M${x+w} ${y} L${x+w-13} ${y+13} V${y+h-13} L${x+w} ${y+h} Z" fill="#6E4C32"/><path d="M${x} ${y+h} L${x+13} ${y+h-13} H${x+w-13} L${x+w} ${y+h} Z" fill="#5A3E2A"/>
+     <rect x="${x+13}" y="${y+13}" width="${w-26}" height="${h-26}" fill="url(#drPanel)"/>
+     ${GRAINV(x+16,y+16,w-32,h-32,12,61+k*7,'#20140C',.55,.6)}${GRAINV(x+16,y+16,w-32,h-32,6,67+k*7,'#B8845A',.14,.5)}
+     <path d="M${x+w-13} ${y+13} V${y+h-13} H${x+13}" fill="none" stroke="#9A6E48" stroke-width=".7" opacity=".7"/>
+     <path d="M${x+13} ${y+h-13} V${y+13} H${x+w-13}" fill="none" stroke="#0E0805" stroke-width="1.2" opacity=".8"/>
+     <path d="M${x} ${y+h} V${y} H${x+w}" fill="none" stroke="#0E0805" stroke-width="1" opacity=".7"/><path d="M${x} ${y+h} H${x+w} V${y}" fill="none" stroke="#8A6040" stroke-width=".7" opacity=".7"/>`).join('')}
+      <!-- 門把附近被手摸亮、門腳被踢舊的地方 -->
+   <ellipse cx="298" cy="384" rx="44" ry="66" fill="url(#drWear)"/>
+   <g stroke="#8A6444" stroke-linecap="round" opacity=".4" fill="none">${Array.from({length:14},()=>{const x=60+sc()*280,y=618+sc()*24,l=4+sc()*16;return `<path d="M${x.toFixed(1)} ${y.toFixed(1)} l${l.toFixed(1)} ${(sc()*3-1.5).toFixed(1)}" stroke-width="${(.3+sc()*.5).toFixed(2)}"/>`}).join('')}</g>
+   <rect x="46" y="630" width="308" height="16" fill="#000" opacity=".25"/>
+   <rect x="46" y="52" width="308" height="594" fill="url(#drShade)"/>
+   <path d="M46.6 52 V646" stroke="#C9905A" stroke-width="1" opacity=".5"/>
+   <g fill="#8A6A3A"><rect x="42" y="540" width="8" height="28" rx="1"/></g><path d="M42.6 541 V567" stroke="#F0DCA6" stroke-width=".7" opacity=".7"/><circle cx="46" cy="546" r="1" fill="#3A2A12"/><circle cx="46" cy="562" r="1" fill="#3A2A12"/>
+   <!-- 黃銅房號牌 -->
+   <g data-part="num"><rect x="165" y="330" width="76" height="40" rx="3" fill="#000" opacity=".45"/>
+     <rect x="162" y="326" width="76" height="40" rx="3" fill="url(#drPlate)"/>
+     <rect x="165" y="329" width="70" height="34" rx="2" fill="none" stroke="#5E4522" stroke-width=".8"/><rect x="166" y="330" width="68" height="32" rx="1.6" fill="none" stroke="#FBE6B0" stroke-width=".4" opacity=".6"/>
+     <path d="M170 360 q14 -8 30 -3 q16 4 34 -6 v12 h-64 Z" fill="#4A6A52" opacity=".16"/>
+     <text x="201" y="357" font-family="Georgia,serif" font-size="24" letter-spacing="6" text-anchor="middle" fill="#FBE6B0" opacity=".5">203</text>
      <text x="200" y="356" font-family="Georgia,serif" font-size="24" letter-spacing="6" text-anchor="middle" fill="#2A1C10">203</text>
-     <path d="M226 326 h12 v11 q-7 -2 -12 -11 Z" fill="#3D2A1D"/><path d="M226 326 q5 9 12 11" fill="none" stroke="#4A3526" stroke-width=".7"/>
-     <circle cx="168" cy="332" r="1.2" fill="#4A3518"/><circle cx="168" cy="360" r="1.2" fill="#4A3518"/><circle cx="232" cy="360" r="1.2" fill="#4A3518"/>
+     <path d="M226 326 h12 v11 q-7 -2 -12 -11 Z" fill="#3A281A"/><path d="M226 326 q5 9 12 11" fill="none" stroke="#6E4C32" stroke-width=".7"/>
+     ${[[168,332],[168,360],[232,360]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="1.6" fill="#6A4E26"/><path d="M${x-1} ${y-.6} l2 1.2" stroke="#2A1C10" stroke-width=".5"/>`).join('')}
      <rect class="glint" x="150" y="326" width="14" height="40" fill="#FFF3D0" opacity="0"/></g>
-   <circle cx="200" cy="300" r="3.4" fill="#17100A" stroke="#8A6B3F" stroke-width="1.2"/><circle cx="199" cy="299" r="1" fill="#C9BDA2" opacity=".5"/>
-   <g data-part="knob"><rect x="304" y="340" width="26" height="74" rx="5" fill="#000" opacity=".4"/>
-     <rect x="302" y="336" width="26" height="74" rx="5" fill="url(#drBrass)"/><rect x="304.5" y="338.5" width="21" height="69" rx="4" fill="none" stroke="#5E4522" stroke-width=".7"/>
-     <ellipse cx="315" cy="396" rx="2.4" ry="3.6" fill="#1B120A"/><rect x="314" y="397" width="2" height="6" fill="#1B120A"/>
-     <ellipse cx="318" cy="372" rx="13" ry="13" fill="#000" opacity=".4"/>
-     <g class="turn"><circle cx="315" cy="368" r="12" fill="url(#drKnob)"/><circle cx="315" cy="368" r="12" fill="none" stroke="#3A2A12" stroke-width=".8"/>
-       <path d="M307 363 q6 -6 13 -2" fill="none" stroke="#FFF1C8" stroke-width="1.2" opacity=".7" stroke-linecap="round"/><path d="M315 357 v5" stroke="#4A3518" stroke-width="1"/></g></g>
-   <g class="m-sensor" data-part="sensor"><rect x="301" y="284" width="28" height="40" rx="3" fill="#121416" stroke="#4A4F52" stroke-width="1"/>
-     <rect x="304" y="287" width="22" height="34" rx="2" fill="#1A1E21"/><circle cx="315" cy="292" r="1.6" fill="#D9503A"/>
-     <path d="M309 308 q6 -6 12 0 M311 313 q4 -4 8 0" stroke="#7E868A" stroke-width="1" fill="none" stroke-linecap="round"/></g>
-   <g class="m-keyup"><g transform="rotate(-8 258 304)"><rect x="232" y="290" width="58" height="36" rx="3" fill="#000" opacity=".35" filter="url(#soft2)"/><rect x="228" y="286" width="58" height="36" rx="3" fill="url(#kcG)"/>
-     <text x="257" y="302" font-family="serif" font-size="7" letter-spacing="1.5" text-anchor="middle" fill="#E6ECF0">碧海行館</text><text x="257" y="315" font-family="Georgia,serif" font-size="9" text-anchor="middle" fill="#F4F7F9">203</text></g></g>
+   <circle cx="200" cy="300" r="4.4" fill="#8A6A3A"/><circle cx="200" cy="300" r="3" fill="#120C08"/><circle cx="199" cy="299" r="1" fill="#C9D2D6" opacity=".6"/>
+   <!-- 門把與舊式鑰匙孔 -->
+   <g data-part="knob"><rect x="305" y="340" width="26" height="74" rx="5" fill="#000" opacity=".45"/>
+     <rect x="302" y="336" width="26" height="74" rx="5" fill="url(#drPlate)"/><rect x="304.5" y="338.5" width="21" height="69" rx="4" fill="none" stroke="#5E4522" stroke-width=".7"/>
+     <path d="M303 406 V341 Q303 337 307 337 H323" fill="none" stroke="#FBE6B0" stroke-width=".7" opacity=".7"/>
+     <circle cx="315" cy="342.6" r="1.4" fill="#6A4E26"/><circle cx="315" cy="404" r="1.4" fill="#6A4E26"/>
+     <ellipse cx="315" cy="392" rx="2.6" ry="3.6" fill="#120C08"/><path d="M313.8 393 h2.4 l.8 7 h-4 Z" fill="#120C08"/><path d="M311 388 q4 -4 8 0" fill="none" stroke="#FBE6B0" stroke-width=".5" opacity=".6"/>
+     <ellipse cx="320" cy="373" rx="13" ry="12" fill="#000" opacity=".45"/>
+     <g class="turn"><circle cx="315" cy="368" r="12.4" fill="url(#drKnob)"/><circle cx="315" cy="368" r="12.4" fill="none" stroke="#3A2A12" stroke-width=".8"/>
+       <circle cx="315" cy="368" r="8" fill="none" stroke="#6A4E26" stroke-width=".5" opacity=".7"/>
+       <path d="M307 362 q6 -6.4 13 -2.4" fill="none" stroke="#FFF6D8" stroke-width="1.4" opacity=".8" stroke-linecap="round"/><path d="M315 356.6 v5" stroke="#4A3518" stroke-width="1"/></g></g>
+   <!-- 後來加裝的感應區：新的黑色塑膠、兩顆新螺絲、沿著門邊釘上去的細線 -->
+   <path d="M326 284 Q340 280 340 262 V236" fill="none" stroke="#14171A" stroke-width="2"/><path d="M337 250 h6 M337 270 h6" stroke="#8A9094" stroke-width="1.4"/>
+   <g class="m-sensor" data-part="sensor"><rect x="303.4" y="287" width="28" height="40" rx="3.4" fill="#000" opacity=".45"/>
+     <rect x="301" y="284" width="28" height="40" rx="3.4" fill="#14171A"/><rect x="301.5" y="284.5" width="27" height="39" rx="3" fill="none" stroke="#5A6268" stroke-width=".8"/>
+     <path d="M302.4 320 V288 Q302.4 285.4 305 285.4 H324" fill="none" stroke="#9AA2A8" stroke-width=".5" opacity=".7"/>
+     <rect x="304.4" y="295" width="21.2" height="24" rx="2" fill="#1E2428"/>
+     <circle cx="315" cy="290.6" r="1.7" fill="#E0503A"><animate attributeName="opacity" dur="2.4s" repeatCount="indefinite" values="1;.35;1"/></circle><circle cx="315" cy="290.6" r="3.6" fill="#E0503A" opacity=".2"/>
+     <path d="M308.6 310 q6.4 -6.4 12.8 0 M310.8 314 q4.2 -4.2 8.4 0" stroke="#8A9498" stroke-width="1" fill="none" stroke-linecap="round"/><circle cx="315" cy="316.6" r="1" fill="#8A9498"/>
+     <circle cx="304.6" cy="287.6" r=".9" fill="#C9D2D6"/><circle cx="325.4" cy="320.4" r=".9" fill="#C9D2D6"/>
+     <path d="M312 285 h10 l-12 38 h-6 Z" fill="#FFF" opacity=".05"/></g>
+   <g class="m-keyup"><g transform="translate(168 -276)">${HAND}</g></g>
  `)}
- ${Z(.5,`<g data-part="gap"><rect x="46" y="646" width="308" height="6" fill="#F6D49A"><animate attributeName="opacity" dur="6s" repeatCount="indefinite" values=".6;1;.72;.6"/></rect>
+ ${Z(.5,`<!-- 門縫底下的光：房裡有人走動，光會被遮一下 -->
+   <g data-part="gap"><rect x="46" y="646" width="308" height="6" fill="#FFE0A0"><animate attributeName="opacity" dur="6s" repeatCount="indefinite" values=".65;1;.76;.65"/></rect>
+   <rect x="46" y="646" width="308" height="1.6" fill="#FFF6DC" opacity=".8"/>
    <rect x="120" y="646" width="46" height="6" fill="#120C08" opacity=".85"><animate attributeName="x" dur="11s" repeatCount="indefinite" values="120;196;230;150;120" keyTimes="0;.3;.5;.8;1"/></rect>
-   <path class="pulse" d="M46 652 H354 L390 740 H10 Z" fill="#F0C888" opacity=".16"/>
-   <rect x="20" y="650" width="360" height="50" fill="#F0C888" opacity=".14" filter="url(#soft)"/></g>`)}
- ${Z(.8,`<g class="m-key" data-part="key"><g transform="rotate(-14 110 600)">
-   <rect x="80" y="578" width="74" height="46" rx="4" fill="#000" opacity=".4" filter="url(#soft2)"/>
-   <rect x="76" y="572" width="74" height="46" rx="4" fill="url(#kcG)"/><rect x="76" y="572" width="74" height="46" rx="4" fill="#FFF" opacity=".08"/>
-   <text x="113" y="592" font-family="serif" font-size="9" letter-spacing="2" text-anchor="middle" fill="#E6ECF0">碧海行館</text>
-   <text x="113" y="608" font-family="Georgia,serif" font-size="11" text-anchor="middle" fill="#F4F7F9">203</text>
-   <path d="M58 614 q16 -10 30 -2 q8 6 2 14 q-14 8 -34 2 Z" fill="#B48A68"/></g></g>`)}
- <rect x="-40" y="-40" width="480" height="800" fill="#000" opacity=".2"/>
-`),
+   <path class="pulse" d="M46 652 H354 L404 760 H-4 Z" fill="url(#drGapL)"/>
+   </g>
+   <rect x="26" y="652" width="348" height="3" fill="#8A6A3A" opacity=".8"/><rect x="26" y="652" width="348" height=".8" fill="#F0DCA6" opacity=".6"/>`)}
+ ${Z(.8,`<g class="m-key" data-part="key">${HAND}</g>`)}
+ <rect x="-40" y="-40" width="480" height="800" fill="#000" opacity=".12"/>
+`)},
 
 door2:()=>SVG('door2',`
  <defs>
@@ -896,151 +1186,250 @@ door2:()=>SVG('door2',`
  <rect x="-40" y="-40" width="480" height="800" fill="#000" opacity=".16"/>
 `),
 
-room:()=>SVG('room',`
+room:()=>{
+ const fl=RNG(11);
+ /* 窗外海面的碎光 */
+ const glit=Array.from({length:16},(_,i)=>{const t=i/15,y=304+t*t*34+t*6,w=6+fl()*22*(.4+t),x=262-w/2+(fl()-.5)*(10+t*26),o=(.85-t*.55).toFixed(2);
+   return `<path d="M${x.toFixed(1)} ${y.toFixed(1)} h${w.toFixed(1)}" stroke-width="${(1.4-t*.7).toFixed(2)}" opacity="${o}">${i%3?'':`<animate attributeName="opacity" dur="${(2.2+i*.37).toFixed(1)}s" repeatCount="indefinite" values="${o};${(o*.25).toFixed(2)};${o}"/>`}</path>`}).join('');
+ return SVG('room',`
  <defs>
-  <pattern id="wallP" width="16" height="16" patternUnits="userSpaceOnUse">
-    <rect width="16" height="16" fill="#172024"/><path d="M8 0v16" stroke="#1B262B" stroke-width="1.2"/>
-    <path d="M0 0v16" stroke="#141C20" stroke-width=".8"/>
-    <circle cx="8" cy="8" r="1" fill="#22303A" opacity=".7"/></pattern>
-  <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#27384A"/><stop offset=".42" stop-color="#5E5F74"/>
-    <stop offset=".74" stop-color="#C5825A"/><stop offset="1" stop-color="#EDB673"/></linearGradient>
-  <linearGradient id="seaG" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#6B6A6C"/><stop offset=".25" stop-color="#34464F"/><stop offset="1" stop-color="#14212A"/></linearGradient>
-  <linearGradient id="foldG" x1="0" y1="0" x2="1" y2="0">
-    <stop offset="0" stop-color="#E9DCC0" stop-opacity=".3"/><stop offset=".45" stop-color="#FFF8E8" stop-opacity=".78"/>
-    <stop offset="1" stop-color="#C9B690" stop-opacity=".28"/></linearGradient>
-  <linearGradient id="floorG" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#241B14"/><stop offset="1" stop-color="#0E0A08"/></linearGradient>
-  <linearGradient id="deskTopG" x1="0" y1="0" x2="1" y2="0">
-    <stop offset="0" stop-color="#3A2A1C"/><stop offset=".7" stop-color="#5A3F27"/><stop offset="1" stop-color="#6B4A2C"/></linearGradient>
-  <linearGradient id="deskFrontG" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#33241A"/><stop offset="1" stop-color="#1A120D"/></linearGradient>
-  <linearGradient id="deckG" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#4A443E"/><stop offset=".12" stop-color="#35302B"/><stop offset="1" stop-color="#211E1B"/></linearGradient>
-  <linearGradient id="shellG" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#4B4036"/><stop offset="1" stop-color="#2C251F"/></linearGradient>
-  <radialGradient id="roomL" cx=".72" cy=".4" r=".75">
-    <stop offset="0" stop-color="#C9905A" stop-opacity=".26"/><stop offset=".5" stop-color="#7A5A42" stop-opacity=".08"/>
-    <stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
-  <radialGradient id="vigR" cx=".6" cy=".45" r=".8">
-    <stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#03070A" stop-opacity=".72"/></radialGradient>
-  <clipPath id="winC"><rect x="232" y="96" width="130" height="266"/></clipPath>
-  <pattern id="grilleP" width="3.4" height="3.4" patternUnits="userSpaceOnUse"><circle cx="1.7" cy="1.7" r=".85" fill="#0E0C0B"/></pattern>
+  <pattern id="rmWall" width="22" height="34" patternUnits="userSpaceOnUse">
+    <rect width="22" height="34" fill="#35423E"/><rect width="11" height="34" fill="#394741"/>
+    <path d="M0 0v34 M11 0v34" stroke="#2C3835" stroke-width=".7"/>
+    <g fill="#4C5B50" opacity=".5"><circle cx="5.5" cy="7.4" r=".9"/><circle cx="5.5" cy="10.6" r=".9"/><circle cx="3.9" cy="9" r=".9"/><circle cx="7.1" cy="9" r=".9"/></g>
+    <g fill="#2A3632" opacity=".7"><circle cx="16.5" cy="24.4" r=".9"/><circle cx="16.5" cy="27.6" r=".9"/><circle cx="14.9" cy="26" r=".9"/><circle cx="18.1" cy="26" r=".9"/></g></pattern>
+  <linearGradient id="rmWallSh" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#070C0E" stop-opacity=".78"/><stop offset=".38" stop-color="#0B1214" stop-opacity=".42"/><stop offset=".62" stop-color="#1A1A14" stop-opacity=".05"/><stop offset="1" stop-color="#0B1214" stop-opacity=".5"/></linearGradient>
+  <radialGradient id="rmWarm" cx="297" cy="250" r="230" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F2B878" stop-opacity=".42"/><stop offset=".45" stop-color="#C98A52" stop-opacity=".16"/><stop offset="1" stop-color="#C98A52" stop-opacity="0"/></radialGradient>
+  <radialGradient id="rmStain"><stop offset="0" stop-color="#141B18" stop-opacity=".5"/><stop offset=".7" stop-color="#141B18" stop-opacity=".22"/><stop offset="1" stop-color="#141B18" stop-opacity="0"/></radialGradient>
+  <linearGradient id="rmSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FB1C2"/><stop offset=".4" stop-color="#C9D2C0"/><stop offset=".72" stop-color="#F3D7A2"/><stop offset="1" stop-color="#F9BE7C"/></linearGradient>
+  <radialGradient id="rmSun" cx="262" cy="292" r="96" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFBEA"/><stop offset=".22" stop-color="#FFEFC4" stop-opacity=".85"/><stop offset="1" stop-color="#FFE0A0" stop-opacity="0"/></radialGradient>
+  <linearGradient id="rmSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F1CF98"/><stop offset=".16" stop-color="#A9B4A6"/><stop offset=".6" stop-color="#5F8088"/><stop offset="1" stop-color="#3C5C66"/></linearGradient>
+  <linearGradient id="rmFrame" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2C3A37"/><stop offset=".5" stop-color="#5E726A"/><stop offset="1" stop-color="#33423F"/></linearGradient>
+  <linearGradient id="rmBeam" x1="270" y1="190" x2="96" y2="400" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFE6B4" stop-opacity=".2"/><stop offset=".6" stop-color="#FFD9A0" stop-opacity=".08"/><stop offset="1" stop-color="#FFD9A0" stop-opacity="0"/></linearGradient>
+  <linearGradient id="rmBed" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4E4A42"/><stop offset=".45" stop-color="#8E806A"/><stop offset="1" stop-color="#B9A280"/></linearGradient>
+  <linearGradient id="rmBedSide" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A7A62"/><stop offset="1" stop-color="#2E2A24"/></linearGradient>
+  <pattern id="rmFlor" width="22" height="18" patternUnits="userSpaceOnUse" patternTransform="matrix(1 -.03 -.75 .52 0 372)">
+    ${[[5.5,5,'#B8605A'],[16.5,14,'#5E8498']].map(([x,y,c])=>`<g fill="${c}">${[0,72,144,216,288].map(a=>`<circle cx="${x}" cy="${y-2.6}" r="1.9" transform="rotate(${a} ${x} ${y})"/>`).join('')}</g><circle cx="${x}" cy="${y}" r="1.3" fill="#E9CE8A"/>
+      <path d="M${x+3.4} ${y+2.6} q4 .6 5.4 4.4 q-4.4 0 -5.4 -4.4" fill="#66794E"/>`).join('')}
+    <circle cx="15" cy="4" r="1" fill="#E4C4A8"/><circle cx="4" cy="14" r="1" fill="#E4C4A8"/></pattern>
+  <linearGradient id="rmPillow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6E6E68"/><stop offset=".6" stop-color="#A9A493"/><stop offset="1" stop-color="#E6D8B8"/></linearGradient>
+  <linearGradient id="rmHead" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1E140E"/><stop offset=".7" stop-color="#4A3020"/><stop offset="1" stop-color="#7A5232"/></linearGradient>
+  <linearGradient id="rmPhone" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7E7868"/><stop offset=".6" stop-color="#B9AE94"/><stop offset="1" stop-color="#E4D4B0"/></linearGradient>
+  <linearGradient id="rmShirt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFF0D2"/><stop offset=".1" stop-color="#C4BDB0"/><stop offset=".5" stop-color="#93929A"/><stop offset=".9" stop-color="#ABA69E"/><stop offset="1" stop-color="#E9D6B4"/></linearGradient>
+  <linearGradient id="rmSkirt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4A5560"/><stop offset=".14" stop-color="#262E38"/><stop offset=".7" stop-color="#171C24"/><stop offset="1" stop-color="#2C343E"/></linearGradient>
+  <linearGradient id="rmArm" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F6CFA2"/><stop offset=".3" stop-color="#B48C70"/><stop offset="1" stop-color="#96735C"/></linearGradient>
+  <linearGradient id="rmHair" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5A3E2A"/><stop offset=".25" stop-color="#2A1E17"/><stop offset=".8" stop-color="#1C1512"/><stop offset="1" stop-color="#3E2C20"/></linearGradient>
+  <linearGradient id="rmDeskTop" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3A281B"/><stop offset=".5" stop-color="#6A4A2E"/><stop offset=".82" stop-color="#A87848"/><stop offset="1" stop-color="#8A6038"/></linearGradient>
+  <linearGradient id="rmDeskFront" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E2B1E"/><stop offset=".5" stop-color="#261A12"/><stop offset="1" stop-color="#120C08"/></linearGradient>
+  <linearGradient id="rmFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6A4A30"/><stop offset=".5" stop-color="#3A281C"/><stop offset="1" stop-color="#140E0A"/></linearGradient>
+  <radialGradient id="rmVig" cx=".6" cy=".42" r=".82"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#04080A" stop-opacity=".7"/></radialGradient>
+  <clipPath id="rmWinC"><rect x="232" y="96" width="130" height="266"/></clipPath>
+  <clipPath id="rmBedC"><path d="M-40 380 L138 374 L204 398 L204 480 L-40 480 Z"/></clipPath>
  </defs>
 
- <rect x="-40" y="-40" width="480" height="800" fill="url(#wallP)"/>
- <rect x="-40" y="-40" width="480" height="560" fill="url(#roomL)"/>
- <rect class="glow" x="-40" y="-40" width="480" height="560" fill="url(#roomL)"/>
+ <!-- 遠景：牆 -->
+ <rect x="-40" y="-40" width="480" height="800" fill="url(#rmWall)"/>
+ <ellipse cx="70" cy="150" rx="70" ry="44" fill="url(#rmStain)"/><ellipse cx="408" cy="430" rx="40" ry="60" fill="url(#rmStain)"/><ellipse cx="190" cy="118" rx="34" ry="20" fill="url(#rmStain)" opacity=".7"/>
+ <path d="M120 98 q-3 16 2 30 q4 10 -1 22" fill="none" stroke="#1E2826" stroke-width=".6" opacity=".7"/>
+ <rect x="-40" y="-40" width="480" height="800" fill="url(#rmWallSh)"/>
+ <rect x="-40" y="-40" width="480" height="800" fill="url(#rmWarm)"/>
+ <rect class="glow" x="-40" y="-40" width="480" height="800" fill="url(#rmWarm)"/>
 
- ${Z(.15,`<rect x="-40" y="470" width="480" height="300" fill="url(#floorG)"/>
-   <g stroke="#0C0907" stroke-width=".8" opacity=".8">${[-5,-4,-3,-2,-1,0,1,2,3,4,5,6].map(k=>`<path d="M${196+k*44} 470 L${190+k*120} 760"/>`).join('')}</g>
-   <rect x="-40" y="458" width="480" height="12" fill="#10171A"/><rect x="-40" y="458" width="480" height="1" fill="#27343A"/>
-   <path d="M236 470 L366 470 L470 620 L176 620 Z" fill="#E0A66A" opacity=".1"/>
-   <path class="glow" d="M226 470 L376 470 L500 640 L140 640 Z" fill="#E9B981" opacity=".12"/>`)}
+ ${Z(.15,`<rect x="-40" y="448" width="480" height="13" fill="#2A2A22"/><rect x="-40" y="448" width="480" height="1.2" fill="#6A6450" opacity=".7"/>
+   <rect x="-40" y="461" width="480" height="300" fill="url(#rmFloor)"/>
+   <g stroke="#1A120C" stroke-width=".9" opacity=".8">${[-3,-2,-1,0,1,2,3,4,5,6,7].map(k=>`<path d="M${300+k*26} 461 L${300+k*110} 760"/>`).join('')}</g>
+   <path d="M330 461 L400 461 L470 560 L360 560 Z" fill="#FFD9A0" opacity=".16"/>
+   <path class="glow" d="M318 461 L412 461 L500 580 L346 580 Z" fill="#FFE2B0" fill-opacity=".14"/>`)}
 
  ${Z(.3,`
-   <rect x="200" y="66" width="194" height="330" fill="#D9A066" opacity=".1" filter="url(#soft)"/>
-   <rect x="216" y="80" width="162" height="298" fill="#1B2529"/>
-   <path d="M216 378 V80 H378" fill="none" stroke="#34444B" stroke-width="1"/>
-   <rect x="228" y="92" width="138" height="274" fill="#0C1215"/>
-   <g clip-path="url(#winC)">
-   <rect x="232" y="96" width="130" height="206" fill="url(#skyG)"/>
-   <g fill="#F6D9A8" opacity=".38" filter="url(#soft2)"><ellipse cx="258" cy="212" rx="34" ry="3"/><ellipse cx="318" cy="236" rx="40" ry="2.4"/><ellipse cx="282" cy="258" rx="26" ry="2"/></g>
-   <ellipse cx="270" cy="300" rx="62" ry="20" fill="#FFD9A0" opacity=".55" filter="url(#soft)"/>
-   <path d="M306 302 q14 -9 26 -7 q10 -6 30 -3 v10 Z" fill="#232B36"/>
-   <rect x="232" y="301" width="130" height="62" fill="url(#seaG)"/>
-   <rect x="232" y="300.4" width="130" height="1.2" fill="#F8D7A2" opacity=".7"/>
-   <g stroke="#F8D7A2" stroke-linecap="round">${[[262,308,22,.7],[258,314,30,.5],[266,321,18,.45],[254,329,34,.3],[268,338,20,.24],[250,348,28,.16]].map(([x,y,w,o],i)=>
-     `<path d="M${x} ${y} h${w}" stroke-width="${1.3-i*.12}" opacity="${o}"><animate attributeName="opacity" dur="${2.4+i*.7}s" repeatCount="indefinite" values="${o};${o*.35};${o}"/></path>`).join('')}</g>
-   <circle cx="344" cy="296.5" r=".9" fill="#FFE9B8"><animate attributeName="opacity" dur="3.2s" repeatCount="indefinite" values="1;.2;1"/></circle>
+   <!-- 窗框與窗外 -->
+   <rect x="221" y="85" width="152" height="288" rx="1" fill="#141C1B"/>
+   <rect x="222" y="86" width="150" height="286" fill="url(#rmFrame)"/>
+   <path d="M222 372 V86 H372" fill="none" stroke="#8FA398" stroke-width=".9" opacity=".7"/>
+   <g stroke="#1E2A28" stroke-width=".5" opacity=".7"><path d="M225 120 l1.4 14 M369 200 l-1 18 M226 300 l1 10"/></g>
+   <rect x="230" y="94" width="134" height="270" fill="#10181A"/>
+   <g clip-path="url(#rmWinC)">
+     <rect x="232" y="96" width="130" height="208" fill="url(#rmSky)"/>
+     <g fill="#FFF6E0"><path d="M236 150 q14 -7 30 -3 q10 -6 24 -2 q8 2 10 6 q-22 3 -64 -1 Z" opacity=".6"/><path d="M300 186 q12 -5 26 -2 q12 -4 26 1 q6 2 8 5 q-30 3 -60 -4 Z" opacity=".5"/>
+       <path d="M238 222 q20 -4 44 -1 q8 1 10 3 q-28 2 -54 -2 Z" opacity=".55"/><path d="M312 246 q16 -3 34 0 q8 1 12 3 q-24 2 -46 -3 Z" opacity=".5"/></g>
+     <g fill="#D9A27A" opacity=".35"><path d="M240 153 q30 3 58 1 q-28 5 -58 -1 Z"/><path d="M304 189 q28 4 54 2 q-26 4 -54 -2 Z"/></g>
+     <rect x="232" y="96" width="130" height="266" fill="url(#rmSun)"/>
+     <path d="M296 304 q8 -5 18 -5 q6 -5 16 -5 q14 -1 32 4 v7 Z" fill="#8E9A98"/><path d="M296 304 q8 -5 18 -5 q6 -5 16 -5 q14 -1 32 4" fill="none" stroke="#F6E0B4" stroke-width=".6" opacity=".8"/>
+     <rect x="353.4" y="287" width="2" height="7.6" fill="#E9E2D0"/><path d="M352.6 287 h3.6 l-1.8 -2.4 Z" fill="#7A3A30"/>
+     <circle cx="354.4" cy="286.4" r="1.1" fill="#FFF3C8"><animate attributeName="opacity" dur="3.2s" repeatCount="indefinite" values="1;.15;1"/></circle>
+     <rect x="232" y="303" width="130" height="60" fill="url(#rmSea)"/>
+     <rect x="232" y="302.6" width="130" height="1" fill="#FFF1CC" opacity=".8"/>
+     <g stroke="#FFF3D2" stroke-linecap="round">${glit}</g>
+     <g stroke="#3C5C66" stroke-width=".6" opacity=".35"><path d="M300 316 h30 M318 324 h40 M290 333 h26 M326 340 h34"/></g>
+     <g><path d="M322 311.6 h13 l-2 3 h-9.4 Z" fill="#2E3A3E"/><path d="M327.6 311.6 v-5 h2.6 v5" fill="#3E4A4C"/><path d="M329 306.6 v-3.4" stroke="#2E3A3E" stroke-width=".5"/><path d="M323 314.8 h10" stroke="#FFF1CC" stroke-width=".4" opacity=".6"/></g>
+     <!-- 近處的屋頂 -->
+     <g fill="#2A3234"><path d="M232 362 V346 l10 -5 l16 5 V350 h14 v-7 h20 v9 h10 l12 -6 l12 6 v-4 h18 v6 h18 V362 Z"/>
+       <rect x="276" y="336" width="12" height="8" rx="2"/><path d="M279 344 v4 M285 344 v4" stroke="#2A3234" stroke-width="1"/></g>
+     <g fill="none" stroke="#F2C48A" stroke-width=".7" opacity=".75"><path d="M232 346 l10 -5 l16 5 M272 343 h20 M276.5 337 q5.5 -2 11 0 M302 352 l12 -6 l12 6 M326 348 h18"/></g>
+     <g stroke="#232B2D" stroke-width=".6" fill="none"><path d="M340 348 V328 M335 331 h10 M336 334 h8 M337.4 337 h5.2"/><path d="M232 334 Q290 344 340 330" opacity=".7"/><path d="M232 338 Q290 349 340 333" opacity=".5"/></g>
    </g>
+   <!-- 會滑動的那扇窗 -->
    <g class="sash">
-     <rect x="297" y="96" width="65" height="266" fill="#FFF" opacity=".035"/>
-     <path d="M304 96 l22 0 l-30 120 l0 -92 Z" fill="#FFF" opacity=".05"/>
-     <rect x="297" y="96" width="65" height="266" fill="none" stroke="#1B2529" stroke-width="5"/>
-     <rect x="297" y="226" width="65" height="4" fill="#1B2529"/>
-     <path d="M299.5 98 V360" stroke="#3A4A51" stroke-width=".7"/>
+     <rect x="297" y="96" width="65" height="266" fill="#DCEBEA" opacity=".05"/>
+     <path d="M306 96 l20 0 l-28 130 l0 -96 Z" fill="#FFF" opacity=".1"/><path d="M340 232 l12 0 l-22 110 l-8 0 Z" fill="#FFF" opacity=".06"/>
+     <rect x="297" y="96" width="65" height="266" fill="none" stroke="#3E4E4A" stroke-width="5"/>
+     <rect x="297" y="225" width="65" height="5" fill="#3E4E4A"/><rect x="297" y="225" width="65" height="1" fill="#9DB0A6" opacity=".6"/>
+     <path d="M299.6 98.6 V359.4 M301 99 H359.4" stroke="#9DB0A6" stroke-width=".6" opacity=".7" fill="none"/>
+     <rect x="298.6" y="218" width="3" height="20" rx="1.2" fill="#B49A66"/>
    </g>
-   <rect x="232" y="96" width="65" height="266" fill="#FFF" opacity=".03"/>
-   <path d="M238 96 l16 0 l-22 90 l0 -66 Z" fill="#FFF" opacity=".05"/>
-   <rect x="232" y="96" width="65" height="266" fill="none" stroke="#1B2529" stroke-width="5"/>
-   <rect x="232" y="226" width="65" height="4" fill="#1B2529"/>
-   <path d="M234.5 98 V360" stroke="#3A4A51" stroke-width=".7"/>
-   <rect x="210" y="366" width="174" height="9" fill="#2A363C"/><rect x="210" y="366" width="174" height="1.2" fill="#5B6C72"/>
-   <rect x="214" y="375" width="166" height="5" fill="#0D1316" opacity=".8"/>
-   <path d="M204 84 H390" stroke="#3B2E22" stroke-width="2.6" stroke-linecap="round"/>
-   <circle cx="204" cy="84" r="3" fill="#4A3A2B"/><circle cx="390" cy="84" r="3" fill="#4A3A2B"/>
+   <rect x="232" y="96" width="65" height="266" fill="#DCEBEA" opacity=".04"/>
+   <path d="M240 96 l16 0 l-24 96 l0 -64 Z" fill="#FFF" opacity=".09"/>
+   <rect x="232" y="96" width="65" height="266" fill="none" stroke="#3E4E4A" stroke-width="5"/>
+   <rect x="232" y="225" width="65" height="5" fill="#3E4E4A"/><rect x="232" y="225" width="65" height="1" fill="#9DB0A6" opacity=".6"/>
+   <path d="M234.6 98.6 V359.4 M236 99 H294.4" stroke="#9DB0A6" stroke-width=".6" opacity=".7" fill="none"/>
+   <rect x="212" y="366" width="170" height="10" fill="#54675F"/><rect x="212" y="366" width="170" height="1.4" fill="#C9D2BC" opacity=".8"/>
+   <path d="M236 366 h124 l14 10 h-152 Z" fill="#FFE2A8" opacity=".22"/>
+   <rect x="216" y="376" width="162" height="6" fill="#0B1112" opacity=".7"/>
+   <!-- 窗簾桿與紗簾 -->
+   <path d="M204 82 H392" stroke="#2A1E15" stroke-width="3.4" stroke-linecap="round"/><path d="M204 81.2 H392" stroke="#8A6B48" stroke-width=".7" stroke-linecap="round" opacity=".8"/>
+   <circle cx="204" cy="82" r="3.4" fill="#5A4030"/><circle cx="392" cy="82" r="3.4" fill="#5A4030"/>
    ${SHEER(226,86,74,286,6,30)}
    <g class="curtR">${SHEER(350,86,30,290,3,-8)}</g>
+   <!-- 牆上的小畫、開關 -->
+   <g transform="rotate(-1.2 74 222)"><rect x="46" y="198" width="60" height="50" fill="#000" opacity=".35"/>
+     <rect x="43" y="194" width="60" height="50" fill="#3B2A1C"/><path d="M43 244 V194 H103" fill="none" stroke="#7A5A3C" stroke-width=".8"/><path d="M103 195 V244" stroke="#C99A60" stroke-width=".9" opacity=".7"/>
+     <rect x="48" y="199" width="50" height="40" fill="#A39A80"/><rect x="52" y="203" width="42" height="32" fill="#5E7A82"/>
+     <path d="M52 221 h42 v14 h-42 Z" fill="#3E5A62"/><path d="M52 221 q10 -7 20 -2 q10 -6 22 0" fill="#7A8E78"/><path d="M66 226 h9 l-1.6 2.6 h-6 Z M70.4 226 v-5 l3 4" fill="#D9D2BC"/>
+     <path d="M48 199 l20 0 l-16 40 l-4 0 Z" fill="#FFF" opacity=".08"/></g>
+   <path d="M73 194 l-14 -12 M74 194 l14 -12" stroke="#1A2220" stroke-width=".5"/><circle cx="73.5" cy="181" r="1.2" fill="#5A5A4A"/>
+   <rect x="196" y="262" width="11" height="16" rx="1.4" fill="#8A8672"/><rect x="199.6" y="266" width="3.8" height="8" rx=".8" fill="#4A4A3E"/><path d="M196.6 277 V263.4 Q196.6 262.6 197.6 262.6 H206" fill="none" stroke="#C9C2A6" stroke-width=".5"/>
  `)}
 
- ${Z(.42,`<g data-part="xiahe" class="m-xh">
-   <g fill="#0A0E11">
-     <path d="M306 290 q20 -8 38 0 l5 12 q-3 30 -2 60 l-40 0 q1 -30 -6 -60 Z"/>
-     <path d="M312 360 h30 q6 30 10 110 h-50 q4 -80 10 -110 Z"/>
-     <path d="M307 296 q-9 16 -8 46 q1 46 3 104 l7 0 q-1 -56 1 -100 q1 -26 4 -40 Z"/>
-     <path d="M346 296 q9 16 8 46 q-1 46 -3 104 l-7 0 q1 -56 -1 -100 q-1 -26 -4 -40 Z"/>
-     <rect x="321" y="276" width="11" height="16"/>
-     <path d="M313 252 q13 -16 28 -2 q5 10 3 30 q2 9 5 14 l-9 1 q-6 -5 -13 -5 q-8 0 -15 5 l-8 -1 q4 -7 4 -16 q-2 -16 5 -26 Z"/>
-   </g>
-   <g fill="none" stroke="#F0B878" stroke-linecap="round" opacity=".6">
-     <path d="M339 251 q6 9 4 29 q2 9 5 14" stroke-width=".9"/>
-     <path d="M345 299 q8 16 7 46 q-1 40 -3 100" stroke-width=".8" opacity=".7"/>
-     <path d="M344 291 l4 10" stroke-width=".8"/>
-   </g>
-   <g fill="#0A0E11"><path d="M343 282 q8 4 12 12 q-6 -2 -10 -4 Z"><animate attributeName="d" dur="5.5s" repeatCount="indefinite" values="M343 282 q8 4 12 12 q-6 -2 -10 -4 Z;M343 282 q11 2 15 9 q-7 0 -12 -2 Z;M343 282 q8 4 12 12 q-6 -2 -10 -4 Z"/></path>
-     <path d="M346 272 q7 1 10 6 q-5 0 -9 -1 Z"><animate attributeName="d" dur="4.6s" repeatCount="indefinite" values="M346 272 q7 1 10 6 q-5 0 -9 -1 Z;M346 272 q9 -1 13 3 q-6 1 -11 1 Z;M346 272 q7 1 10 6 q-5 0 -9 -1 Z"/></path></g>
-   </g>`)}
+ ${Z(.34,`<g data-part="phone">
+   <rect x="149.5" y="250" width="36" height="60" rx="5" fill="#05090A" opacity=".5"/>
+   <rect x="146" y="246" width="36" height="60" rx="5" fill="url(#rmPhone)"/>
+   <path d="M150 304.4 Q147 304 146.8 300 V251 Q147 247 151 246.8 H177" fill="none" stroke="#5E5A4C" stroke-width=".8"/>
+   <path d="M181.2 251 V301" stroke="#FFE9BE" stroke-width="1" opacity=".8"/>
+   <rect x="161" y="251.6" width="16" height="9" rx="1" fill="#E9E0C4"/><path d="M163 254.4 h12 M163 257 h8" stroke="#6A6452" stroke-width=".6"/>
+   <circle cx="169" cy="282" r="11" fill="#55503F"/><circle cx="169" cy="282" r="10.4" fill="#C9BEA2"/>
+   ${Array.from({length:10},(_,i)=>{const a=(i*30-200)*Math.PI/180;return `<circle cx="${(169+Math.cos(a)*7.2).toFixed(1)}" cy="${(282+Math.sin(a)*7.2).toFixed(1)}" r="1.5" fill="#3E3A30"/>`}).join('')}
+   <circle cx="169" cy="282" r="3.6" fill="#E9E0C4" stroke="#7A745E" stroke-width=".5"/><path d="M176.4 289.4 l2.6 2.6" stroke="#8A8468" stroke-width="1.4" stroke-linecap="round"/>
+   <path d="M160 274 q6 -8 16 -6" fill="none" stroke="#FFF8E0" stroke-width=".8" opacity=".6"/>
+   <path class="cord" d="${(()=>{let d='M153 305';for(let i=1;i<=40;i++){const t=i/40;d+=` L${(153+Math.sin(t*3.14)*13+Math.sin(i*1.9)*2).toFixed(1)} ${(305+Math.sin(t*3.14)*62+(t>.5?(t-.5)*-4:0)).toFixed(1)}`;}return d;})()}" fill="none" stroke="#6A6452" stroke-width="1.3" stroke-linejoin="round"/>
+   <g class="handset"><rect x="147.4" y="249" width="11" height="56" rx="5.5" fill="#8E8872"/>
+     <rect x="146.4" y="248" width="13" height="14" rx="5.5" fill="#A59E86"/><rect x="146.4" y="292" width="13" height="14" rx="5.5" fill="#A59E86"/>
+     <path d="M156.6 262 V292" stroke="#E4D8B8" stroke-width=".9" opacity=".8"/><path d="M149 262 V292" stroke="#5E5A4C" stroke-width=".7"/></g>
+ </g>`)}
 
- ${Z(.5,`<g data-part="phone">
-   <rect x="149" y="251" width="36" height="60" rx="4" fill="#000" opacity=".35" filter="url(#soft2)"/>
-   <rect x="146" y="246" width="36" height="60" rx="4" fill="#232B30"/>
-   <path d="M150 304 Q146 304 146 300 V250 Q146 246 150 246 H178" fill="none" stroke="#3C484F" stroke-width=".8"/>
-   <circle cx="168" cy="282" r="10.5" fill="#161C20" stroke="#39454C" stroke-width=".8"/>
-   ${Array.from({length:10},(_,i)=>{const a=(i*30-200)*Math.PI/180;return `<circle cx="${(168+Math.cos(a)*7.2).toFixed(1)}" cy="${(282+Math.sin(a)*7.2).toFixed(1)}" r="1.3" fill="#2C363C"/>`}).join('')}
-   <circle cx="168" cy="282" r="2.6" fill="#2C363C"/>
-   <rect x="161" y="252" width="15" height="9" rx="1" fill="#C9BDA2" opacity=".5"/>
-   <path class="cord" d="${(()=>{let d='M153 304';for(let i=1;i<=46;i++){const t=i/46;d+=` L${(153+Math.sin(t*3.1)*9+Math.sin(i*1.9)*2.2).toFixed(1)} ${(304+t*118).toFixed(1)}`;}return d;})()}" fill="none" stroke="#1A2125" stroke-width="1.5" stroke-linejoin="round"/>
-   <g class="handset"><rect x="148" y="249" width="10" height="56" rx="5" fill="#2E383E"/>
-     <rect x="147" y="248" width="12" height="13" rx="5" fill="#364249"/><rect x="147" y="293" width="12" height="13" rx="5" fill="#364249"/>
-     <path d="M149.5 262 V292" stroke="#4B5961" stroke-width=".8"/></g>
+ ${Z(.4,`
+   <!-- 床：木頭床頭板、枕頭、碎花床罩，窗子的光斜斜落在上面 -->
+   <path d="M-40 384 V332 Q-40 318 -20 318 H98 Q118 318 118 334 V384 Z" fill="url(#rmHead)"/>
+   <path d="M-40 331 Q-40 319 -20 319 H98 Q117 319 117 334" fill="none" stroke="#C98F5A" stroke-width=".9" opacity=".65"/>
+   <path d="M117.4 336 V380" stroke="#E0A66A" stroke-width="1" opacity=".7"/>
+   <rect x="-30" y="330" width="138" height="46" rx="6" fill="none" stroke="#150D08" stroke-width="1.2" opacity=".7"/>
+   ${GRAIN(-36,324,150,56,9,31,'#150D08',.5,.5)}
+   <path d="M-40 366 Q-10 352 34 354 Q84 352 102 362 Q110 372 100 384 L-40 388 Z" fill="url(#rmPillow)"/>
+   <path d="M-30 366 Q0 356 34 358 Q76 357 96 364" fill="none" stroke="#FFF3D6" stroke-width=".8" opacity=".55"/>
+   <path d="M20 360 q4 10 0 22 M62 359 q5 10 2 22" fill="none" stroke="#5A5A54" stroke-width=".6" opacity=".5"/>
+   <path d="M-40 380 L138 374 L204 398 L204 480 L-40 480 Z" fill="url(#rmBed)"/>
+   <g clip-path="url(#rmBedC)"><rect x="-40" y="370" width="250" height="110" fill="url(#rmFlor)"/>
+     <path d="M-40 388 L46 381 L150 379 L204 398 L204 480 L-40 480 Z" fill="#0A0F10" opacity=".3"/>
+     <path d="M-8 383.6 L52 381 L44 416 L-30 418 Z" fill="#FFE0A6" opacity=".55"/><path d="M60 380.6 L120 378 L150 412 L54 415.6 Z" fill="#FFE0A6" opacity=".5"/>
+     <path class="glow" d="M-20 384 L130 377.6 L170 414 L-36 419 Z" fill="#FFF0CC" fill-opacity=".3"/></g>
+   <path d="M40 357 Q84 353 100 362 Q108 371 100 382 L52 384 Z" fill="#FFE6B8" opacity=".3"/>
+   <path d="M138 374 L204 398 V480 H160 Z" fill="url(#rmBedSide)" opacity=".75"/>
+   <path d="M-40 380 L138 374 L204 398" fill="none" stroke="#FFE9BE" stroke-width=".9" opacity=".6"/>
+   <g fill="none" stroke="#3A342C" stroke-width=".6" opacity=".55"><path d="M-30 396 q60 -6 120 -3 q40 2 70 12"/><path d="M150 380 q10 20 8 60"/><path d="M178 390 q6 20 4 50"/></g>
+   <!-- 空氣裡的光束：從左半扇窗斜斜落到床上 -->
+   <path d="M232 100 L297 100 L297 360 L150 412 L-30 416 L-10 384 Z" fill="url(#rmBeam)" opacity=".55"><animate attributeName="opacity" dur="9s" repeatCount="indefinite" values=".45;.62;.5;.45"/></path>
+   <path d="M244 110 L290 110 L290 340 L128 410 L-6 412 L10 388 Z" fill="url(#rmBeam)" opacity=".5"/>
+   <path d="M256 124 L282 124 L282 320 L104 408 L18 408 L30 392 Z" fill="url(#rmBeam)" opacity=".45"/>
+ `)}
+
+ ${Z(.46,`<g data-part="xiahe" class="m-xh">
+   <path d="M330 474 Q352 480 384 473 L380 478 Q352 484 334 478 Z" fill="#000" opacity=".5"/>
+   <!-- 腳、拖鞋 -->
+   <path d="M341 461 h6 l.6 7 h-7 Z M357 461 h6 l.4 7 h-7 Z" fill="#8E6C56"/>
+   <path d="M338 468 q5 -2.4 10.6 0 q1.6 4 -.4 6 h-10 q-1.6 -3 -.2 -6 Z M355.4 468 q5 -2.4 10.6 0 q1.6 4 -.4 6 h-10 q-1.6 -3 -.2 -6 Z" fill="#6E5A4A"/>
+   <path d="M338.4 468.4 q5 -2.4 10 0 M355.8 468.4 q5 -2.4 10 0" fill="none" stroke="#D9B48A" stroke-width=".6" opacity=".7"/>
+   <!-- 深色長裙 -->
+   <path d="M338.5 356 L366 356 C369 372 374.5 394 377.5 420 C379.5 440 381 452 381.5 463 q-6 3.2 -12 2 q-7 2.6 -15 1.4 q-8 1.6 -15.6 -.4 q-7 .4 -14 -3 C325.6 450 327.6 436 330.4 418 C333.6 394 336.6 372 338.5 356 Z" fill="url(#rmSkirt)"/>
+   <g fill="none" stroke-linecap="round"><path d="M344 362 C341 392 336 430 334 464" stroke="#0E1218" stroke-width="1" opacity=".7"/><path d="M352 360 C352 396 351 436 350 466" stroke="#0E1218" stroke-width=".9" opacity=".6"/>
+     <path d="M360 361 C364 394 369 432 372 464.6" stroke="#0E1218" stroke-width="1" opacity=".7"/><path d="M347.4 366 C345 396 341.6 430 340 464" stroke="#55626E" stroke-width=".7" opacity=".5"/>
+     <path d="M356 364 C357.6 396 361 432 363 465.6" stroke="#55626E" stroke-width=".7" opacity=".4"/>
+     <path d="M338 358 C335.4 380 331.4 410 329.4 430 C327.6 444 326 456 325.4 462.6" stroke="#FFD49A" stroke-width="1" opacity=".75"/></g>
+   <path d="M338.2 355 h28 l.6 4.4 q-14.6 2 -29.4 0 Z" fill="#313A45"/>
+   <!-- 右手臂：手肘彎著，前臂收在身前 -->
+   <path d="M370.2 323.6 L379.2 320.2 C381.6 331 382.4 341 381.4 349.6 C380.8 354.6 377.4 357.6 372.6 357 L366.4 355.4 L367 349 C369.4 347 371.2 344.6 371.2 341 C371.2 335 370.6 329 370.2 323.6 Z" fill="url(#rmArm)" opacity=".9"/>
+   <path d="M379.6 322 C381.6 331 382.4 341 381.4 349.6 C380.8 354.6 377.4 357.6 372.6 357" fill="none" stroke="#FFD9A8" stroke-width=".7" opacity=".7"/>
+   <!-- 白色短袖襯衫 -->
+   <path d="M344 296.6 C338 297.4 332.4 299.6 330 303.6 L325.4 320.4 L334.4 324 L336 316.4 C337 332 338 346 338.6 357.4 Q352 360 366 357.4 C366.6 346 367.6 332 368.6 316.4 L370.2 324 L379.2 320.4 L374.6 303.6 C372.2 299.6 366.6 297.4 360.6 296.6 Q352.4 300.4 344 296.6 Z" fill="url(#rmShirt)"/>
+   <g fill="none" stroke="#5E5E68" stroke-linecap="round" opacity=".6"><path d="M352.2 301.6 q-1 28 .2 55" stroke-width=".6"/><path d="M341 304 q4 14 2.2 30" stroke-width=".7"/><path d="M363.6 304 q-4 14 -2.2 30" stroke-width=".7"/>
+     <path d="M340 348 q6 4 12 1.6 M356 351 q5 1.6 9 -2" stroke-width=".7"/><path d="M336 316.4 q2.2 -5.4 5.4 -8 M368.6 316.4 q-2.2 -5.4 -5.4 -8" stroke-width=".6"/></g>
+   <path d="M370.2 324 L379.2 320.4 L378.2 316.6 L369.4 320 Z" fill="#D4CEC2"/><path d="M376 318 l3.2 -3.4 l1.6 4.8 Z" fill="#E9E2D2"/>
+   <path d="M325.4 320.4 L334.4 324 L335.2 320 L326.4 316.6 Z" fill="#EFE6D2"/>
+   <path d="M330 303.6 L325.4 320.4 M344 296.6 C338 297.4 332.4 299.6 330 303.6" fill="none" stroke="#FFF3D6" stroke-width="1.1" opacity=".95"/>
+   <path d="M336.2 318 C337 332 338 346 338.6 357" fill="none" stroke="#FFE9C0" stroke-width=".7" opacity=".6"/>
+   <path d="M344.4 295.4 q8 4 16 0 l.8 3.2 q-8.8 4.2 -17.6 0 Z" fill="#E4DCCC"/>
+   <!-- 左手臂：手扶在書桌邊，手指細長 -->
+   <path d="M325.4 320.4 L334.4 324 C333.4 334 331.8 344 331.4 356 C331 366 331.4 380 332.4 390.6 C334 395 334.8 399.6 335 403.6 L334.6 411 q-.8 1.5 -1.6 0 L332.6 404.6 L332.2 412.4 q-.8 1.5 -1.6 0 L329.8 405 L329.2 412 q-.8 1.4 -1.6 0 L327 404.8 L326.2 409.8 q-.7 1.3 -1.5 0 C324.2 402.6 325 396.4 326.6 391 C325 380 323.4 366 323 354 C322.6 344 323.6 332 325.4 320.4 Z" fill="url(#rmArm)"/>
+   <path d="M325.2 321.6 C323.6 332 322.6 344 323 354 C323.4 366 325 380 326.6 391 C325 396.4 324.2 402.6 324.6 409" fill="none" stroke="#FFE2B4" stroke-width=".9" opacity=".9"/>
+   <!-- 及肩的頭髮 -->
+   <path d="M341.4 264 C340 252 345.4 245.6 352.4 245.6 C359.8 245.6 364.8 252 364 264 C364.4 272 367.6 280 369.2 287 C370.2 292 367 295.6 363.4 297.2 C360 298.4 356 297.4 352.6 298 C348.6 298.8 344.4 298.4 341 297.2 C337 295.6 334.6 292 336 287 C338 280 341 272 341.4 264 Z" fill="url(#rmHair)"/>
+   <path d="M344 258 Q350 255 357 256.4" fill="none" stroke="#B48A62" stroke-width="1.6" opacity=".28" stroke-linecap="round"/>
+   <g fill="none" stroke-linecap="round"><path d="M349 248 C344.6 258 343.4 276 341 294" stroke="#6E4E36" stroke-width=".7" opacity=".7"/><path d="M353 247 C351.6 262 351 280 350 296" stroke="#0E0A08" stroke-width=".7" opacity=".6"/>
+     <path d="M357.6 248.4 C360 262 361.6 280 363.6 295" stroke="#4A3526" stroke-width=".6" opacity=".6"/><path d="M345.4 251.6 C342.4 262 341.6 276 338.6 291" stroke="#8A6444" stroke-width=".6" opacity=".6"/>
+     <path d="M362 252 C364 264 365 280 367.4 292" stroke="#0E0A08" stroke-width=".6" opacity=".5"/>
+     <path d="M341.4 264 C340 252 345.4 245.6 352.4 245.6 C357 245.6 360.6 248 362.6 251.6" stroke="#FFD49A" stroke-width="1" opacity=".9"/>
+     <path d="M341.4 264 C341 272 338 280 336 287 C335 290.6 335.8 293.6 338 295.6" stroke="#FFD49A" stroke-width=".9" opacity=".85"/></g>
+   <g fill="#2A1E17"><path d="M366 282 q7 3 10.6 10 q-5.6 -1.4 -9.4 -3.4 Z"><animate attributeName="d" dur="5.5s" repeatCount="indefinite" values="M366 282 q7 3 10.6 10 q-5.6 -1.4 -9.4 -3.4 Z;M366 282 q10 1 14 7.6 q-7 .4 -11.6 -1.6 Z;M366 282 q7 3 10.6 10 q-5.6 -1.4 -9.4 -3.4 Z"/></path>
+     <path d="M365.4 272 q6 .6 9 5 q-4.6 .4 -8.2 -.6 Z"><animate attributeName="d" dur="4.6s" repeatCount="indefinite" values="M365.4 272 q6 .6 9 5 q-4.6 .4 -8.2 -.6 Z;M365.4 272 q8 -1.4 12 2.4 q-5.6 1.4 -10.6 1.4 Z;M365.4 272 q6 .6 9 5 q-4.6 .4 -8.2 -.6 Z"/></path></g>
  </g>`)}
 
  ${Z(.7,`
-   <path d="M-10 448 H330 L342 468 H-22 Z" fill="url(#deskTopG)"/>
-   <g fill="none" stroke="#2B1D12" stroke-width=".6" opacity=".7">
-     <path d="M-10 452 q80 -2 160 1 t180 -1"/><path d="M-14 457 q90 3 170 0 t184 2"/><path d="M-18 463 q70 -2 150 1 t206 -1"/>
-     <path d="M60 455 q30 2 60 0"/><path d="M190 460 q40 -2 90 1"/></g>
-   <path d="M236 448 H330 L342 468 H250 Z" fill="#F0B878" opacity=".14"/>
-   <rect x="-22" y="468" width="364" height="7" fill="#6B4A2C"/><rect x="-22" y="468" width="364" height="1" fill="#A77B4C" opacity=".8"/>
-   <rect x="-22" y="475" width="364" height="60" fill="url(#deskFrontG)"/>
-   <rect x="20" y="482" width="130" height="44" fill="none" stroke="#120C08" stroke-width="1.4"/>
-   <rect x="170" y="482" width="150" height="44" fill="none" stroke="#120C08" stroke-width="1.4"/>
-   <circle cx="85" cy="503" r="3.2" fill="#8A6B3F"/><circle cx="245" cy="503" r="3.2" fill="#8A6B3F"/>
-   <circle cx="84" cy="502" r="1" fill="#D9B77A"/><circle cx="244" cy="502" r="1" fill="#D9B77A"/>
+   <!-- 書桌 -->
+   <path d="M-30 470 L346 470 L334 414 L-18 414 Z" fill="url(#rmDeskTop)"/>
+   ${GRAIN(-24,416,360,52,13,5,'#24170E',.5,.6)}${GRAIN(-24,418,360,48,7,9,'#D9A66B',.22,.5)}
+   <path d="M236 414 L334 414 L346 470 L214 470 Z" fill="#FFD9A0" opacity=".2"/>
+   <path d="M250 414 L300 414 L296 470 L226 470 Z" fill="#FFF0CC" opacity=".12"/>
+   <path d="M-18 414 H334" stroke="#1A100A" stroke-width="1" opacity=".7"/>
+   <ellipse cx="300" cy="446" rx="9" ry="2.6" fill="none" stroke="#2A1A0E" stroke-width=".7" opacity=".5"/>
+   <rect x="-30" y="470" width="376" height="7" fill="#8A6038"/><rect x="-30" y="470" width="376" height="1.2" fill="#F0C48A" opacity=".75"/>
+   <path d="M30 470.6 h46 M130 470.6 h30 M250 470.6 h60" stroke="#FFE9C0" stroke-width=".8" opacity=".5"/>
+   <rect x="-30" y="477" width="376" height="70" fill="url(#rmDeskFront)"/>
+   ${GRAIN(-26,480,368,60,9,17,'#0E0806',.6,.6)}
+   ${[[14,140],[176,150]].map(([x,w])=>`<rect x="${x}" y="484" width="${w}" height="46" rx="1" fill="#000" opacity=".2"/><path d="M${x} 530 V484 H${x+w}" fill="none" stroke="#0E0806" stroke-width="1.6"/><path d="M${x} 530 H${x+w} V484" fill="none" stroke="#6A4A30" stroke-width=".8" opacity=".8"/>
+     <path d="M${x+w/2-11} 503 q11 9 22 0 v-3 h-22 Z" fill="#7A5E36"/><path d="M${x+w/2-11} 500 h22" stroke="#E4C88A" stroke-width="1" opacity=".8"/><path d="M${x+w/2-8} 505 q8 5 16 0" fill="none" stroke="#2A1C0E" stroke-width=".8"/>`).join('')}
+   <path d="M346 470 V547" stroke="#C98F5A" stroke-width="1" opacity=".5"/>
 
-   <g data-part="mag"><ellipse cx="54" cy="466" rx="40" ry="3" fill="#000" opacity=".4"/>
-     <path d="M16 462 L86 456 L90 462 L20 468 Z" fill="#8F8468"/>
-     <g class="cover"><path d="M15 458 L85 452 L88 457 L18 463 Z" fill="#B9AC88"/>
-       <path d="M15 458 L85 452 L85.6 453.2 L15.6 459.2 Z" fill="#8E3B32"/>
-       <path d="M24 460.2 L52 457.8" stroke="#5E5540" stroke-width="1"/><path d="M58 457.2 L80 455.4" stroke="#7B7157" stroke-width=".7"/></g></g>
+   <!-- 受潮的旅館便箋、鉛筆 -->
+   <g data-part="mag" transform="translate(19 0)"><path d="M-22 466 Q8 470 40 465 l-4 3 Q8 472 -18 469 Z" fill="#000" opacity=".4"/>
+     <path d="M-16 456 q14 -3 28 -1 q10 -3 22 -1 l2 9 q-12 -2 -24 1 q-14 -2 -27 1 Z" fill="#A89C80"/>
+     <g class="cover"><path d="M-17 452 q14 -3.4 28 -1.4 q10 -3 22 -1 l1.6 8 q-12 -2 -23.6 1 q-14 -2 -27 1 Z" fill="#E4D8B8"/>
+       <path d="M-17 452 q14 -3.4 28 -1.4 q10 -3 22 -1 l.5 2.6 q-12 -2 -22.6 1 q-14 -2 -27.4 1.4 Z" fill="#5E7A86"/>
+       <text x="8" y="454.2" font-family="'LXGW WenKai TC','Kaiti TC',serif" font-size="2.9" letter-spacing="1.2" text-anchor="middle" fill="#F2EBD6">碧海行館</text>
+       <path d="M-12 458 q10 -1.6 20 -.4 M-11.6 460.6 q12 -1.6 26 -.6" stroke="#B4A888" stroke-width=".5" fill="none"/>
+       <path d="M20 452 q4 4 2 8" stroke="#B9A884" stroke-width=".6" fill="none" opacity=".7"/></g>
+     <path d="M-8 463.4 L30 459.4" stroke="#C99A3E" stroke-width="1.6" stroke-linecap="round"/><path d="M30 459.4 l3 -.4" stroke="#3A2A1C" stroke-width="1.2" stroke-linecap="round"/><path d="M-8 463 L26 459.4" stroke="#F4D68A" stroke-width=".5" opacity=".7"/></g>
 
    <g class="m-roomdeck">${DECK()}${TAPES()}</g>
    <g class="m-hand"><g transform="translate(66 101) rotate(-40 288 308) scale(.8)">
      <path d="M286 292 q22 -5 46 1 l0 29 q-24 6 -46 1 Z" fill="url(#skinFade)"/>${FINGERS('skinDim')}</g></g>
 
-   <g data-part="glass"><ellipse cx="322" cy="463" rx="9" ry="2" fill="#000" opacity=".35"/>
-     <path d="M314 436 L316 462 Q322 464.5 328 462 L330 436 Z" fill="#DCE9EA" opacity=".12"/>
-     <path d="M314.8 446 L316 462 Q322 464.5 328 462 L329.2 446 Z" fill="#F0B878" opacity=".22"/>
-     <ellipse cx="322" cy="446" rx="7.2" ry="1.3" fill="#FFE2B0" opacity=".5"/>
-     <path d="M314 436 L316 462 Q322 464.5 328 462 L330 436" fill="none" stroke="#DCE9EA" stroke-width=".7" opacity=".6"/>
-     <ellipse cx="322" cy="436" rx="8" ry="1.5" fill="none" stroke="#F4E2C0" stroke-width=".7" opacity=".8"/>
-     <path d="M317 440 L318.2 458" stroke="#FFF" stroke-width=".9" opacity=".5"/></g>
+   <!-- 玻璃杯：水面和杯緣接住窗子的光，桌面上有一小片折射的亮斑 -->
+   <g data-part="glass"><path d="M308 464 Q322 468 336 463 L332 466 Q322 469 312 466 Z" fill="#000" opacity=".4"/>
+     <path d="M300 466 L316 462 L318 466 L304 469 Z" fill="#FFE9BE" opacity=".5"/>
+     <path d="M314 436 L316 462 Q322 464.6 328 462 L330 436 Z" fill="#DCE9EA" opacity=".14"/>
+     <path d="M314.8 446 L316 462 Q322 464.6 328 462 L329.2 446 Z" fill="#F2C48A" opacity=".3"/>
+     <ellipse cx="322" cy="446" rx="7.2" ry="1.4" fill="#FFEBC4" opacity=".7"/>
+     <path d="M314 436 L316 462 Q322 464.6 328 462 L330 436" fill="none" stroke="#E9F2F0" stroke-width=".7" opacity=".7"/>
+     <ellipse cx="322" cy="436" rx="8" ry="1.6" fill="none" stroke="#FFF3D6" stroke-width=".8" opacity=".9"/>
+     <path d="M328.6 438 L327.4 460" stroke="#FFF" stroke-width="1" opacity=".7"/><path d="M316.6 440 L317.6 458" stroke="#FFF" stroke-width=".5" opacity=".35"/></g>
  `)}
- <rect x="-40" y="-40" width="480" height="800" fill="url(#vigR)"/>
-`),
 
+ ${Z(1,`<!-- 最前面：拉開的椅子，只看得到椅背上緣 -->
+   <path d="M196 548 L200 506 Q202 498 212 497 Q250 493 290 497 Q300 498 302 506 L306 548 Z" fill="#0D0907"/>
+   <path d="M200 506 Q202 498 212 497 Q250 493 290 497 Q300 498 302 506" fill="none" stroke="#C98F5A" stroke-width="1.2" opacity=".7"/>
+   <path d="M201 510 Q250 504 301 510 L301.6 516 Q250 510 200.6 516 Z" fill="#2A1C12"/>
+   <g stroke="#1E140D" stroke-width="5"><path d="M222 516 V548 M250 514 V548 M278 516 V548"/></g>
+   <g stroke="#6A4A30" stroke-width=".7" opacity=".7"><path d="M224.6 517 V548 M252.6 515 V548 M280.6 517 V548"/></g>`)}
+ <rect x="-40" y="-40" width="480" height="800" fill="url(#rmVig)"/>
+`)},
 tape:()=>SVG('tape',`
  <defs>
   <linearGradient id="tpBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4E4841"/><stop offset=".08" stop-color="#37322D"/><stop offset="1" stop-color="#1F1C19"/></linearGradient>
