@@ -32,7 +32,7 @@
   <h1>旁白稿</h1>
   <p class="note">每一塊是一段要產生的語音。按「複製」貼到語音工具，下載後把檔名改成左邊那個名字。</p>
   <p class="note">文字直接讀自同一個資料夾的 index.html，正文改了這裡會跟著變。勾選只是幫你記錄做到哪裡，存在這個瀏覽器裡。</p>
-  <p class="note">一段裡如果有「要讀者親手做」的機關，會從機關那一句切成兩段，這樣旁白才停得準。</p>
+  <p class="note">一段裡如果有「要讀者親手做」的機關，會從機關那一句切開，這樣旁白才停得準；太長的段落也會切開，每段不超過 380 字。</p>
   <div class="sum" id="sum">讀取中…</div>
   <div id="list"></div>
 </main>
@@ -45,17 +45,23 @@
   const m=html.match(/^const SCENES = (.*);$/m),mm=html.match(/const MECH = \[([\s\S]*?)\n\];/);
   if(!m){sum.innerHTML='<span class="err">index.html 裡找不到正文。</span>';return;}
   const SCENES=JSON.parse(m[1]);
-  /* 機關所在的句子：at:[場景,句] */
-  const cuts={};if(mm)[...mm[1].matchAll(/at:\[(\d+),\s*(\d+)\]/g)].forEach(x=>{(cuts[x[1]]=cuts[x[1]]||[]).push(+x[2]);});
+  /* 機關所在的句子：MECH 裡每一項的 at 是那一句裡的幾個字，依順序往後找（和閱讀器的找法一樣） */
+  const LINES=[];SCENES.forEach((s,si)=>s.l.forEach((t,li)=>LINES.push([si,li,t.replace(/\*/g,'')])));
+  const cuts={};let cur=0;
+  if(mm)[...mm[1].matchAll(/\{at:'([^']+)'/g)].forEach(x=>{for(let g=cur;g<LINES.length;g++)if(LINES[g][2].includes(x[1])){cur=g+1;(cuts[LINES[g][0]]=cuts[LINES[g][0]]||[]).push(LINES[g][1]);break;}});
   const KEY='beyond-the-tide.narration.done';let done={};try{done=JSON.parse(localStorage.getItem(KEY))||{};}catch(e){}
   const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(done));}catch(e){}};
   const clean=t=>t.replace(/\*/g,'').replace(/　/g,' ');
   let total=0,count=0,lastT=null;const clips=[];
+  const cm=html.match(/const CLIP_MAX=(\d+)/),CLIP_MAX=cm?+cm[1]:380;
+  const SPLIT=(s,cs,max)=>{const out=[];let from=0;[...cs,s.l.length].forEach(to=>{if(to<=from)return;let a=from,n=0;
+    for(let li=from;li<to;li++){const k=s.l[li].replace(/\*/g,'').length;if(li>a&&n+k>max){out.push([a,li]);a=li;n=0;}n+=k;}
+    out.push([a,to]);from=to;});return out;};
   SCENES.forEach((s,si)=>{
-    const cs=(cuts[si]||[]).filter(li=>li>0).sort((a,b)=>a-b);let from=0,part=0;
-    [...cs,s.l.length].forEach(to=>{if(to<=from)return;
-      const name='s'+String(si).padStart(2,'0')+(cs.length?String.fromCharCode(97+part):'');
-      clips.push({si,from,to,name,t:s.t,text:s.l.slice(from,to).map(clean).join('\n')});from=to;part++;});
+    const cs=(cuts[si]||[]).filter(li=>li>0).sort((a,b)=>a-b),parts=SPLIT(s,cs,CLIP_MAX);
+    parts.forEach(([from,to],part)=>{
+      const name='s'+String(si).padStart(2,'0')+(parts.length>1?String.fromCharCode(97+part):'');
+      clips.push({si,from,to,name,t:s.t,text:s.l.slice(from,to).map(clean).join('\n')});});
   });
   clips.forEach(c=>{
     if(c.t!==lastT){lastT=c.t;const h=document.createElement('h2');h.textContent=c.t;list.appendChild(h);}
